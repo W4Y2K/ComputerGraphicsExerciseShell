@@ -186,6 +186,10 @@ int main() {
     auto sunPlanet = std::make_shared<Model>("../../../../project/models/planets/sun.glb");
     auto shinyPlanet = std::make_shared<Model>("../../../../project/models/planets/shiny_planet.glb");
 
+    auto pinkSpaceShip = std::make_shared<Model>("../../../../project/models/spaceships/spaceship_pink.glb");
+    auto greySpaceShip = std::make_shared<Model>("../../../../project/models/spaceships/spaceship_gray.glb");
+    auto ufo = std::make_shared<Model>("../../../../project/models/spaceships/ufo.glb");
+
     auto sunNode = std::make_shared<SceneNode>();
     sunNode->setModel(sunPlanet);
     sunNode->transform = glm::translate(glm::mat4(1.0f), glm::vec3(0, 0, 0)) * glm::scale(glm::mat4(1.0f), glm::vec3(0.05f));
@@ -212,6 +216,21 @@ int main() {
     planet2->transform = glm::translate(glm::mat4(1.0f), glm::vec3(-130, 0, 50)) * glm::scale(glm::mat4(1.0f), glm::vec3(0.1));
     orbit2->addChild(planet2);
     rootNode->addChild(orbit2);
+
+
+
+    auto pinkShipNode = std::make_shared<OscillatingRotationNode>(
+        glm::vec3(150, 40, 0), glm::vec3(0, 1, 0), 2.0f, 45.0f
+    );
+    pinkShipNode->setModel(pinkSpaceShip);
+    rootNode->addChild(pinkShipNode);
+
+    auto greyShipNode = std::make_shared<OscillatingTranslationNode>(
+        glm::vec3(-180, 20, 60), glm::vec3(0, 1, 0), 1.5f, 25.0f
+    );
+    greyShipNode->setModel(greySpaceShip);
+    rootNode->addChild(greyShipNode);
+
 
 
     float lastFrame = static_cast<float>(glfwGetTime());
