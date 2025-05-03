@@ -399,34 +399,53 @@ int main() {
 
 
 
-        SplinePath orbitPath;
-        for (int i = 0; i < 9; ++i) {
-            float angle = glm::radians(i * 40.0f); // 0° – 320°
-            float radius = 80.0f;
-            orbitPath.addPoint(glm::vec3(cos(angle) * radius, 0.0f, sin(angle) * radius));
+
+
+        // Orbit 1
+        std::vector<glm::vec3> circlePoints;
+        int count = 10;
+        float r = 80.0f;
+
+        for (int i = 0; i < count; ++i) {
+            float a = glm::radians(i * 360.0f / count);
+            circlePoints.push_back(glm::vec3(cos(a) * r, 0.0f, sin(a) * r));
         }
 
-        // ❗ Wiederhole Punkte für geschlossene Kurve
-        orbitPath.addPoint(orbitPath.getControlPoints()[1]);
-        orbitPath.addPoint(orbitPath.getControlPoints()[2]);
+        // WICHTIG: Punkte so duplizieren, dass die Kurve richtig „herumlaufen“ kann
+        SplinePath orbit;
+        orbit.addPoint(circlePoints[count - 2]); // P0 (vor letzter)
+        orbit.addPoint(circlePoints[count - 1]); // P1 (letzter)
+        for (const auto& p : circlePoints)       // P2...Pn
+            orbit.addPoint(p);
+        orbit.addPoint(circlePoints[0]);         // Pn+1
+        orbit.addPoint(circlePoints[1]);         // Pn+2
 
         SplineRenderer orbitRenderer;
-        orbitRenderer.setSpline(orbitPath);
+        orbitRenderer.setSpline(orbit);
         orbitRenderer.upload();
 
+		// Orbit 2
+        std::vector<glm::vec3> circlePoints2;
+        float r2 = 140.0f;
+        int pointCount2 = 10;
 
-        SplinePath orbitPath2;
-        float radius2 = 130.0f;
-        for (int i = 0; i < 9; ++i) {
-            float angle = glm::radians(i * 40.0f);
-            orbitPath2.addPoint(glm::vec3(cos(angle) * radius2, 0.0f, sin(angle) * radius2));
+        for (int i = 0; i < count; ++i) {
+            float a = glm::radians(i * 360.0f / count);
+            circlePoints2.push_back(glm::vec3(cos(a) * r2, 0.0f, sin(a) * r2));
         }
-        // Spline schließen
-        orbitPath2.addPoint(orbitPath2.getControlPoints()[1]);
-        orbitPath2.addPoint(orbitPath2.getControlPoints()[2]);
+
+        // WICHTIG: Punkte so duplizieren, dass die Kurve richtig „herumlaufen“ kann
+        SplinePath orbit2;
+        orbit2.addPoint(circlePoints2[count - 2]); // P0 (vor letzter)
+        orbit2.addPoint(circlePoints2[count - 1]); // P1 (letzter)
+        for (const auto& p : circlePoints2)       // P2...Pn
+            orbit2.addPoint(p);
+        orbit2.addPoint(circlePoints2[0]);         // Pn+1
+        orbit2.addPoint(circlePoints2[1]);         // Pn+2
+
 
         SplineRenderer renderer2;
-        renderer2.setSpline(orbitPath2);
+        renderer2.setSpline(orbit2);
         renderer2.upload();
 
 
