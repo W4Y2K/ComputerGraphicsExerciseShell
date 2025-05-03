@@ -7,7 +7,7 @@ vermutlich 50pkt Mindestanforderung
 - 5 Punkte: Skybox
 - 5 Punkte: Point Lights
 - 5 Punkte: Raytracing Spheres
-- 5 Punkte: Camera Modes (teilweise implementiert)
+- 5 Punkte: Camera Modes (Fertig)
 - 5 Punkte: Animation Nodes (teilweise implementiert), Oszillierende Translation fehlt
 - 5 Punkte: Alpha Mask oder Normal Map
 - 20 Punkte: Shadows

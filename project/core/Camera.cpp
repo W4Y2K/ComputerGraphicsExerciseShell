@@ -41,7 +41,7 @@ glm::mat4 Camera::getViewMatrix() const {
 
 
 glm::mat4 Camera::getProjectionMatrix(float aspectRatio) const {
-    return glm::perspective(glm::radians(45.0f), aspectRatio, 0.1f, 5000.0f);
+    return glm::perspective(glm::radians(fov), aspectRatio, nearPlane, farPlane);
 }
 
 void Camera::processMouseInput() {

@@ -66,16 +66,46 @@ void renderImGui(Camera& camera) {
     ImGui_ImplGlfw_NewFrame();
     ImGui::NewFrame();
 
-    ImGui::Begin("Settings");
-    ImGui::SliderFloat3("Light Direction", glm::value_ptr(lightDirection), -1.0f, 1.0f);
-    ImGui::Checkbox("Wireframe Mode", &isWireframe);
-    ImGui::Checkbox("Show Skybox", &showSkybox);
-    ImGui::Checkbox("Directional Light", &enableDirectionalLight);
-    if (ImGui::Button("Reset Camera")) camera.reset();
+    if (ImGui::Begin("Settings")) {
+
+        // Kamera-Parameter zwischenspeichern
+        static float fov = camera.getFOV();
+        static float nearPlane = camera.getNearPlane();
+        static float farPlane = camera.getFarPlane();
+
+        // Kamera-Slider
+        ImGui::SliderFloat("Field of View", &fov, 10.0f, 120.0f);
+        ImGui::SliderFloat("Near Plane", &nearPlane, 0.01f, 10.0f);
+        ImGui::SliderFloat("Far Plane", &farPlane, 100.0f, 10000.0f);
+
+        // Kamera-Werte anwenden
+        camera.setFOV(fov);
+        camera.setNearPlane(nearPlane);
+        camera.setFarPlane(farPlane);
+
+        // Licht-Richtung (deine ursprüngliche Zeile)
+        ImGui::SliderFloat3("Light Direction", glm::value_ptr(lightDirection), -1.0f, 1.0f);
+
+        // Weitere Optionen
+        ImGui::Checkbox("Wireframe Mode", &isWireframe);
+        ImGui::Checkbox("Show Skybox", &showSkybox);
+        ImGui::Checkbox("Directional Light", &enableDirectionalLight);
+
+        // Kamera Reset
+        if (ImGui::Button("Reset Camera")) {
+            camera.reset();
+            fov = camera.getFOV();
+            nearPlane = camera.getNearPlane();
+            farPlane = camera.getFarPlane();
+        }
+
+    }
     ImGui::End();
+
     ImGui::Render();
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 }
+
 
 // Load Texture für skybox galaxy sphere
 unsigned int loadTexture(const char* path) {
