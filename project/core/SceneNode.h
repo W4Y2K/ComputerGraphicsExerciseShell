@@ -32,3 +32,31 @@ private:
     float rotationSpeed = 0.0f; // Grad/Sekunde
     float currentRotation = 0.0f;
 };
+
+class OscillatingRotationNode : public SceneNode {
+public:
+    OscillatingRotationNode(glm::vec3 basePosition, glm::vec3 axis, float speed, float maxAngle);
+    void update(float deltaTime) override;
+
+private:
+    glm::vec3 basePosition;
+    glm::vec3 axis;
+    float speed;
+    float maxAngle;
+    float time = 0.0f;
+};
+
+class OscillatingTranslationNode : public SceneNode {
+public:
+    OscillatingTranslationNode(glm::vec3 basePosition, glm::vec3 direction, float speed, float amplitude);
+    void update(float deltaTime) override;
+
+private:
+    glm::vec3 basePosition;
+    glm::vec3 dir;
+    float speed;
+    float amplitude;
+    float time = 0.0f;
+};
+
+

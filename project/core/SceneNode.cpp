@@ -58,3 +58,35 @@ void SceneNode::setRotationSpeed(float speed) {
 float SceneNode::getRotationSpeed() const {
    return rotationSpeed;
 }
+
+
+// -------- OscillatingRotationNode --------
+OscillatingRotationNode::OscillatingRotationNode(glm::vec3 basePosition, glm::vec3 axis, float speed, float maxAngle)
+    : basePosition(basePosition), axis(glm::normalize(axis)), speed(speed), maxAngle(maxAngle) {
+}
+
+void OscillatingRotationNode::update(float deltaTime) {
+    time += deltaTime;
+    float angle = sin(time * speed) * maxAngle;
+    transform = glm::translate(glm::mat4(1.0f), basePosition) *
+        glm::rotate(glm::mat4(1.0f), glm::radians(angle), axis);
+    SceneNode::update(deltaTime);
+}
+
+
+
+// -------- OscillatingTranslationNode --------
+OscillatingTranslationNode::OscillatingTranslationNode(glm::vec3 basePosition, glm::vec3 direction, float speed, float amplitude)
+    : basePosition(basePosition), dir(glm::normalize(direction)), speed(speed), amplitude(amplitude) {
+}
+
+void OscillatingTranslationNode::update(float deltaTime) {
+    time += deltaTime;
+    float offset = sin(time * speed) * amplitude;
+    glm::vec3 movement = dir * offset;
+    transform = glm::translate(glm::mat4(1.0f), basePosition + movement);
+    SceneNode::update(deltaTime);
+}
+
+
+
