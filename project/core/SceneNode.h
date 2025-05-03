@@ -22,6 +22,10 @@ public:
     virtual void update(float deltaTime);
     virtual void draw(const glm::mat4& parentTransform, unsigned int shaderID);
 
+    virtual glm::mat4 getGlobalTransform(const glm::mat4& parent = glm::mat4(1.0f)) const {
+        return parent * transform;
+    }
+
     glm::mat4 transform;  // Lokale Transformation (Translation, Rotation etc.)
 
 private:

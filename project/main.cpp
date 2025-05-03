@@ -14,6 +14,17 @@
 #include "render/Shader.h"
 #include "core/SceneNode.h"
 #include "core/CameraNode.h"
+#include <vector>
+
+// Struct für Raytracing Kugeln
+struct Sphere {
+    glm::vec3 center;
+    float radius;
+};
+
+std::shared_ptr<SceneNode> sunNode;
+std::shared_ptr<SceneNode> planet1;
+std::shared_ptr<SceneNode> planet2;
 
 // Globals
 bool isWireframe = false; 
@@ -21,6 +32,10 @@ bool showSkybox = true;
 bool enableDirectionalLight = true;
 glm::vec3 lightDirection(0.0f, -1.0f, -1.0f);
 float cameraSpeed = 100.0f;
+
+bool enableRaytrace = false; //  ImGui Toggle
+GLuint quadVAO = 0, quadVBO;
+std::vector<Sphere> tracedSpheres; // Kugelliste Raytracing
 
 void framebuffer_size_callback(GLFWwindow* w, int width, int height) {
     glViewport(0, 0, width, height);
@@ -90,6 +105,9 @@ void renderImGui(Camera& camera) {
         ImGui::Checkbox("Wireframe Mode", &isWireframe);
         ImGui::Checkbox("Show Skybox", &showSkybox);
         ImGui::Checkbox("Directional Light", &enableDirectionalLight);
+
+        // Raytracing
+        ImGui::Checkbox("Raytracing Spheres", &enableRaytrace);
 
         // Kamera Reset
         if (ImGui::Button("Reset Camera")) {
@@ -180,8 +198,36 @@ int main() {
         "../../../../project/shaders/sun.vert",
         "../../../../project/shaders/sun.frag"
     );
+    Shader rayShader(
+        "../../../../project/shaders/raytrace_spheres.vert",
+        "../../../../project/shaders/raytrace_spheres.frag"
+    );
+
+    // === Fullscreen Quad vorbereiten ===
+    float quadVerts[] = {
+        -1.0f, -1.0f,
+         1.0f, -1.0f,
+        -1.0f,  1.0f,
+         1.0f,  1.0f
+    };
+    glGenVertexArrays(1, &quadVAO);
+    glGenBuffers(1, &quadVBO);
+    glBindVertexArray(quadVAO);
+    glBindBuffer(GL_ARRAY_BUFFER, quadVBO);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(quadVerts), quadVerts, GL_STATIC_DRAW);
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), (void*)0);
+    // === Raytracing Kugeln definieren (Initiale Testwerte) ===
+    tracedSpheres = {
+        { glm::vec3(0, 0, 0), 5.0f },
+        { glm::vec3(80, 0, 0), 6.0f },
+        { glm::vec3(-130, 0, 50), 7.0f }
+    };
+
+
 
     // 6) Modelle laden und SceneGraph aufbauen
+
     auto alienPlanet = std::make_shared<Model>("../../../../project/models/planets/alien_planet.glb");
     auto sunPlanet = std::make_shared<Model>("../../../../project/models/planets/sun.glb");
     auto shinyPlanet = std::make_shared<Model>("../../../../project/models/planets/shiny_planet.glb");
@@ -190,7 +236,7 @@ int main() {
     auto greySpaceShip = std::make_shared<Model>("../../../../project/models/spaceships/spaceship_gray.glb");
     auto ufo = std::make_shared<Model>("../../../../project/models/spaceships/ufo.glb");
 
-    auto sunNode = std::make_shared<SceneNode>();
+    sunNode = std::make_shared<SceneNode>();
     sunNode->setModel(sunPlanet);
     sunNode->transform = glm::translate(glm::mat4(1.0f), glm::vec3(0, 0, 0)) * glm::scale(glm::mat4(1.0f), glm::vec3(0.05f));
 
@@ -200,7 +246,7 @@ int main() {
     // Alien Planet Node
     auto orbit1 = std::make_shared<SceneNode>();
     orbit1->setRotationSpeed(5.0f);
-    auto planet1 = std::make_shared<SceneNode>();
+    planet1 = std::make_shared<SceneNode>();
     planet1->setModel(alienPlanet);
 	planet1->setRotationSpeed(10.0f);
     planet1->transform = glm::translate(glm::mat4(1.0f), glm::vec3(80, 0, 0)) * glm::scale(glm::mat4(1.0f), glm::vec3(6));
@@ -210,7 +256,7 @@ int main() {
     // Purple Planet Node
     auto orbit2 = std::make_shared<SceneNode>();
     orbit2->setRotationSpeed(2.5f);
-    auto planet2 = std::make_shared<SceneNode>();
+    planet2 = std::make_shared<SceneNode>();
     planet2->setModel(shinyPlanet);
 	planet2->setRotationSpeed(10.0f);
     planet2->transform = glm::translate(glm::mat4(1.0f), glm::vec3(-130, 0, 50)) * glm::scale(glm::mat4(1.0f), glm::vec3(0.1));
@@ -267,73 +313,68 @@ int main() {
         glm::mat4 view = cameraNode->getCamera().getViewMatrix();
         glm::mat4 proj = cameraNode->getCamera().getProjectionMatrix(1280.0f / 720.0f);
 
+        if (enableRaytrace) {
+            // === Dynamisch transformierte Sphären holen ===
+            auto extractSphere = [](const SceneNode& node, float scale = 1.0f) -> Sphere {
+                glm::mat4 global = node.getGlobalTransform();
+                glm::vec3 center = glm::vec3(global[3]);
+                float radius = glm::length(glm::vec3(global[0])) * scale;
+                return { center, radius };
+                };
 
+            tracedSpheres.clear();
+            tracedSpheres.push_back(extractSphere(*sunNode, 0.5f));
+            tracedSpheres.push_back(extractSphere(*planet1, 1.0f));
+            tracedSpheres.push_back(extractSphere(*planet2, 1.0f));
 
-        // 6) Skybox rendern
-        if (showSkybox) {
-            GLboolean wasCull = glIsEnabled(GL_CULL_FACE);
-            glDisable(GL_CULL_FACE);
-            glDepthMask(GL_FALSE);
-            skyShader.use();
-            skyShader.setMat4("view", glm::mat4(glm::mat3(view)));
-            skyShader.setMat4("projection", proj);
-            glm::mat4 skyModel =                                    // Skybox skallieren
-                glm::scale(glm::mat4(1.0f), glm::vec3(2000.0f));
-            glActiveTexture(GL_TEXTURE0);
-            glBindTexture(GL_TEXTURE_2D, skyTex);
-            skyShader.setInt("equirectangularMap", 0);
-            //skySphere.draw(skyShader.ID, glm::mat4(1.0f));
-            skySphere.draw(skyShader.ID, skyModel);
-            glDepthMask(GL_TRUE);
-            if (wasCull) glEnable(GL_CULL_FACE);
+            rayShader.use();
+            rayShader.setVec3("camPos", cameraNode->getCamera().getPosition());
+            rayShader.setVec3("lightDir", lightDirection);
+            glm::mat4 invVP = glm::inverse(proj * view);
+            rayShader.setMat4("invViewProj", invVP);
+
+            rayShader.setInt("sphereCount", static_cast<int>(tracedSpheres.size()));
+            for (int i = 0; i < tracedSpheres.size(); ++i) {
+                rayShader.setVec3("spheres[" + std::to_string(i) + "].center", tracedSpheres[i].center);
+                rayShader.setFloat("spheres[" + std::to_string(i) + "].radius", tracedSpheres[i].radius);
+            }
+
+            glBindVertexArray(quadVAO);
+            glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+        }
+        else {
+            // === Originales Rendering (Skybox, Modelle etc.) ===
+            if (showSkybox) {
+                GLboolean wasCull = glIsEnabled(GL_CULL_FACE);
+                glDisable(GL_CULL_FACE);
+                glDepthMask(GL_FALSE);
+                skyShader.use();
+                skyShader.setMat4("view", glm::mat4(glm::mat3(view)));
+                skyShader.setMat4("projection", proj);
+                glm::mat4 skyModel = glm::scale(glm::mat4(1.0f), glm::vec3(2000.0f));
+                glActiveTexture(GL_TEXTURE0);
+                glBindTexture(GL_TEXTURE_2D, skyTex);
+                skyShader.setInt("equirectangularMap", 0);
+                skySphere.draw(skyShader.ID, skyModel);
+                glDepthMask(GL_TRUE);
+                if (wasCull) glEnable(GL_CULL_FACE);
+            }
+
+            modelShader.use();
+            modelShader.setInt("texture_diffuse", 0);
+            modelShader.setVec3("lightDir", enableDirectionalLight ? lightDirection : glm::vec3(0.0f));
+            modelShader.setVec3("lightColor", glm::vec3(1.0f));
+            modelShader.setVec3("viewPos", cameraNode->getCamera().getPosition());
+            modelShader.setMat4("view", view);
+            modelShader.setMat4("projection", proj);
+            rootNode->draw(glm::mat4(1.0f), modelShader.ID);
         }
 
-        glm::vec3 lightPos = glm::vec3(0);
-        
-        // 7) Modelle rendern
-        modelShader.use();
-        modelShader.setInt("texture_diffuse", 0);
-        modelShader.setVec3("lightDir", enableDirectionalLight ? lightDirection : glm::vec3(0.0f));
-        modelShader.setVec3("lightColor", glm::vec3(1.0f));
-        modelShader.setVec3("viewPos", cameraNode->getCamera().getPosition());
-        modelShader.setMat4("view", view);
-        modelShader.setMat4("projection", proj);
-        rootNode->draw(glm::mat4(1.0f), modelShader.ID);
-
-        // 7) Modelle rendern
-
-        //// Planeten mit modelShader rendern
-        //modelShader.use();
-        //modelShader.setVec3("lightDir", lightDirection);
-        //modelShader.setVec3("lightPos", glm::vec3(0.0f)); // z. B. Sonnenzentrum
-        //modelShader.setVec3("lightColor", glm::vec3(1.0f));
-        //modelShader.setVec3("viewPos", cameraNode->getCamera().getPosition());
-        //modelShader.setBool("isDirectional", enableDirectionalLight); // UI gesteuert
-
-
-        //// Da die Sonne separat gerendert wird, entfernen wir sie temporär aus dem rootNode
-        //rootNode->removeChild(sunNode);
-        //rootNode->draw(glm::mat4(1.0f), modelShader.ID);
-        //rootNode->addChild(sunNode); // Sonne wieder hinzufügen
-
-        //// Sonne mit sunShader rendern
-        //sunShader.use();
-        //sunShader.setVec3("lightPos", glm::vec3(0.0f));  // Zentrum
-        //sunShader.setVec3("camPos", cameraNode->getCamera().getPosition());
-        //sunShader.setVec3("lightColor", glm::vec3(1.0f));
-        //sunShader.setMat4("view", view);
-        //sunShader.setMat4("projection", proj);
-        //sunNode->draw(glm::mat4(1.0f), sunShader.ID);
-
-        // 8) ImGui zeichnen (mit Camera aus dem Graph)
         renderImGui(cameraNode->getCamera());
-
-        // 9) Buffer swap
         glfwSwapBuffers(window);
-
         processInput(window, cameraNode->getCamera(), delta);
-
     }
+
 
     // 10) Cleanup
     ImGui_ImplOpenGL3_Shutdown();
