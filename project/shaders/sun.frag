@@ -17,29 +17,33 @@ void main()
 {
     vec3 lightVec = lightPos - crntPos;
     float dist = length(lightVec);
-    float a = 3.0;
-    float b = 0.7;
+    float a = 0.5;
+    float b = 0.2;
     float inten = 1.0 / (a * dist * dist + b * dist + 1.0);
 
-    // ambient lighting
-    float ambient = 0.20;
+    float ambient = 0.4;
 
-    // diffuse lighting
     vec3 normal = normalize(Normal);
-    vec3 lightDirection = normalize(lightVec);
-    float diffuse = max(dot(normal, lightDirection), 0.0);
+    vec3 lightDir = normalize(lightVec);
+    float diff = max(dot(normal, lightDir), 0.0);
 
-    // specular lighting
-    float specularLight = 0.50;
-    vec3 viewDirection = normalize(camPos - crntPos);
-    vec3 reflectionDirection = reflect(-lightDirection, normal);
-    float specAmount = pow(max(dot(viewDirection, reflectionDirection), 0.0), 16);
-    float specular = specAmount * specularLight;
+    vec3 viewDir = normalize(camPos - crntPos);
+    vec3 reflectDir = reflect(-lightDir, normal);
+    float spec = pow(max(dot(viewDir, reflectDir), 0.0), 32.0);
+    float specularStrength = 1.0;
 
     vec3 texColor = texture(tex0, texCoord).rgb;
     float specMap = texture(tex1, texCoord).r;
 
-    vec3 result = texColor * (diffuse + ambient) + vec3(specular * specMap * inten) * lightColor;
+    vec3 lighting = lightColor * inten;
+    vec3 emission = texColor * 1.0; // Sonnenemission
+
+    vec3 result = texColor * lighting * (ambient + diff) +
+                  vec3(specularStrength * spec * specMap) * lighting +
+                  emission;
+
+    // Bloom-Vorbereitung: Helligkeit künstlich erhöhen
+    result = min(result * 1.2, vec3(1.0));
 
     FragColor = vec4(result, 1.0);
 }

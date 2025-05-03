@@ -10,6 +10,7 @@
 #include <iostream>
 #include <filesystem>
 #include <memory>
+#include <vector>
 #include "render/Model.h"
 #include "render/Shader.h"
 #include "core/SceneNode.h"
@@ -18,17 +19,27 @@
 #include <SplineRenderer.h>
 
 // Globals
-bool isWireframe = false; 
-bool showSkybox = true; 
+bool isWireframe = false;
+bool showSkybox = true;
 bool enableDirectionalLight = true;
 glm::vec3 lightDirection(0.0f, -1.0f, -1.0f);
 float cameraSpeed = 100.0f;
 
+struct PointLight {
+    glm::vec3 position;
+
+    float constant;
+    float linear;
+    float quadratic;
+
+    glm::vec3 ambient;
+    glm::vec3 diffuse;
+    glm::vec3 specular;
+};
+
 void framebuffer_size_callback(GLFWwindow* w, int width, int height) {
     glViewport(0, 0, width, height);
 }
-
-
 
 void processInput(GLFWwindow* window, Camera& camera, float deltaTime) {
     glm::vec3 forward = glm::normalize(camera.getTarget() - camera.getPosition());
@@ -44,9 +55,9 @@ void processInput(GLFWwindow* window, Camera& camera, float deltaTime) {
         movement -= right;
     if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
         movement += right;
-    if (glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS)
+    if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS)
         movement += up;
-    if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS)
+    if (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS)
         movement -= up;
 
     if (glm::length(movement) > 0.0f) {
@@ -60,48 +71,72 @@ void setupImGui(GLFWwindow* window) {
     ImGui::CreateContext();
     ImGui_ImplGlfw_InitForOpenGL(window, true);
     ImGui_ImplOpenGL3_Init("#version 330 core");
-    
 }
 
-void renderImGui(Camera& camera) {
+void renderImGui(Camera& camera, std::vector<PointLight>& pointLights) {
     ImGui_ImplOpenGL3_NewFrame();
     ImGui_ImplGlfw_NewFrame();
     ImGui::NewFrame();
 
-    if (ImGui::Begin("Settings")) {
+    ImGui::Begin("Settings");
 
-        // Kamera-Parameter zwischenspeichern
-        static float fov = camera.getFOV();
-        static float nearPlane = camera.getNearPlane();
-        static float farPlane = camera.getFarPlane();
-
-        // Kamera-Slider
-        ImGui::SliderFloat("Field of View", &fov, 10.0f, 120.0f);
-        ImGui::SliderFloat("Near Plane", &nearPlane, 0.01f, 10.0f);
-        ImGui::SliderFloat("Far Plane", &farPlane, 100.0f, 10000.0f);
-
-        // Kamera-Werte anwenden
-        camera.setFOV(fov);
-        camera.setNearPlane(nearPlane);
-        camera.setFarPlane(farPlane);
-
-        // Licht-Richtung (deine ursprüngliche Zeile)
-        ImGui::SliderFloat3("Light Direction", glm::value_ptr(lightDirection), -1.0f, 1.0f);
-
-        // Weitere Optionen
-        ImGui::Checkbox("Wireframe Mode", &isWireframe);
-        ImGui::Checkbox("Show Skybox", &showSkybox);
-        ImGui::Checkbox("Directional Light", &enableDirectionalLight);
-
-        // Kamera Reset
-        if (ImGui::Button("Reset Camera")) {
-            camera.reset();
-            fov = camera.getFOV();
-            nearPlane = camera.getNearPlane();
-            farPlane = camera.getFarPlane();
-        }
-
+    // Kamera-Einstellungen
+    if (ImGui::CollapsingHeader("Kamera", ImGuiTreeNodeFlags_DefaultOpen)) {
+        ImGui::SliderFloat("Kamera-Geschwindigkeit", &cameraSpeed, 10.0f, 500.0f);
+        if (ImGui::Button("Kamera zurücksetzen")) camera.reset();
     }
+
+    // Allgemeine Beleuchtungseinstellungen
+    if (ImGui::CollapsingHeader("Allgemeine Beleuchtung", ImGuiTreeNodeFlags_DefaultOpen)) {
+        ImGui::Checkbox("Wireframe-Modus", &isWireframe);
+        ImGui::Checkbox("Skybox anzeigen", &showSkybox);
+        ImGui::Checkbox("Direktionales Licht", &enableDirectionalLight);
+
+        if (enableDirectionalLight) {
+            ImGui::SliderFloat3("Lichtrichtung", glm::value_ptr(lightDirection), -1.0f, 1.0f);
+        }
+    }
+
+    // Point-Light-Einstellungen
+    if (ImGui::CollapsingHeader("Punktlichter", ImGuiTreeNodeFlags_DefaultOpen)) {
+        // Steuerelemente für die Anzahl aktiver Punktlichter
+        int numLights = pointLights.size();
+        static int activePointLights = std::min(numLights, 4); // MAX_POINT_LIGHTS ist 4
+        ImGui::SliderInt("Aktive Punktlichter", &activePointLights, 0, std::min(numLights, 4));
+
+        // Steuerelemente für jedes aktive Punktlicht anzeigen
+        for (int i = 0; i < activePointLights && i < pointLights.size(); i++) {
+            if (ImGui::TreeNode(("Punktlicht " + std::to_string(i + 1)).c_str())) {
+                ImGui::SliderFloat3(("Position##" + std::to_string(i)).c_str(),
+                    glm::value_ptr(pointLights[i].position), -200.0f, 200.0f);
+
+                // Lichtfarben-Steuerelemente
+                float ambient[3] = { pointLights[i].ambient.r, pointLights[i].ambient.g, pointLights[i].ambient.b };
+                float diffuse[3] = { pointLights[i].diffuse.r, pointLights[i].diffuse.g, pointLights[i].diffuse.b };
+                float specular[3] = { pointLights[i].specular.r, pointLights[i].specular.g, pointLights[i].specular.b };
+
+                if (ImGui::ColorEdit3(("Ambient##" + std::to_string(i)).c_str(), ambient)) {
+                    pointLights[i].ambient = glm::vec3(ambient[0], ambient[1], ambient[2]);
+                }
+
+                if (ImGui::ColorEdit3(("Diffuse##" + std::to_string(i)).c_str(), diffuse)) {
+                    pointLights[i].diffuse = glm::vec3(diffuse[0], diffuse[1], diffuse[2]);
+                }
+
+                if (ImGui::ColorEdit3(("Specular##" + std::to_string(i)).c_str(), specular)) {
+                    pointLights[i].specular = glm::vec3(specular[0], specular[1], specular[2]);
+                }
+
+                // Dämpfungssteuerelemente
+                ImGui::SliderFloat(("Konstant##" + std::to_string(i)).c_str(), &pointLights[i].constant, 0.1f, 2.0f);
+                ImGui::SliderFloat(("Linear##" + std::to_string(i)).c_str(), &pointLights[i].linear, 0.0001f, 0.1f, "%.4f");
+                ImGui::SliderFloat(("Quadratisch##" + std::to_string(i)).c_str(), &pointLights[i].quadratic, 0.000001f, 0.01f, "%.6f");
+
+                ImGui::TreePop();
+            }
+        }
+    }
+
     ImGui::End();
 
     ImGui::Render();
@@ -160,19 +195,18 @@ int main() {
     // 4) **Depth-Test** aktivieren
     glEnable(GL_DEPTH_TEST);
     // Änderung: Back-Face Culling aktivieren
-    glEnable(GL_CULL_FACE);               // Änderung: Back-Faces werden ausgefiltert
-    glCullFace(GL_BACK);                  // Änderung: Welche Seite (Back)
-    glFrontFace(GL_CCW);                  // Änderung: Vertex-Winding (Counter-Clockwise)
+    glEnable(GL_CULL_FACE);
+    glCullFace(GL_BACK);
+    glFrontFace(GL_CCW);
 
     setupImGui(window);
 
     // 5) Kamera und Shader anlegen
-    auto rootNode = std::make_shared<SceneNode>();  
-    auto cameraNode = std::make_shared<CameraNode>(window); 
+    auto rootNode = std::make_shared<SceneNode>();
+    auto cameraNode = std::make_shared<CameraNode>(window);
     cameraNode->transform =
         glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 100.0f, 300.0f));
-    rootNode->addChild(cameraNode);                    
-
+    rootNode->addChild(cameraNode);
 
     Shader modelShader(
         "../../../../project/shaders/model.vert",
@@ -194,17 +228,32 @@ int main() {
 
     auto sunNode = std::make_shared<SceneNode>();
     sunNode->setModel(sunPlanet);
-    sunNode->transform = glm::translate(glm::mat4(1.0f), glm::vec3(0, 0, 0)) * glm::scale(glm::mat4(1.0f), glm::vec3(0.05f));
+    sunNode->transform = glm::translate(glm::mat4(1.0f), glm::vec3(0, 0, 0)) *
+        glm::scale(glm::mat4(1.0f), glm::vec3(0.3f));
+    sunNode->setRotationSpeed(0.05f);
+    // WICHTIG: Fügen Sie die Sonne nicht zum rootNode hinzu, um sie separat zu rendern
 
-    sunNode->setRotationSpeed(10.0f);
-    rootNode->addChild(sunNode);
+    // Erstelle die Point Lights
+    std::vector<PointLight> pointLights;
+
+    // Sonnenlicht (zentrales, helles Licht)
+    PointLight sunLight;
+    sunLight.position = glm::vec3(0.0f, 0.0f, 0.0f); // Sonnenzentrum
+    sunLight.constant = 1.0f;
+    sunLight.linear = 0.0014f;
+    sunLight.quadratic = 0.000007f;
+    sunLight.ambient = glm::vec3(0.1f, 0.1f, 0.05f);
+    sunLight.diffuse = glm::vec3(1.0f, 0.9f, 0.7f);
+    sunLight.specular = glm::vec3(1.0f, 1.0f, 0.8f);
+    pointLights.push_back(sunLight);
+
 
     // Alien Planet Node
     auto orbit1 = std::make_shared<SceneNode>();
     orbit1->setRotationSpeed(5.0f);
     auto planet1 = std::make_shared<SceneNode>();
     planet1->setModel(alienPlanet);
-	planet1->setRotationSpeed(10.0f);
+    planet1->setRotationSpeed(10.0f);
     planet1->transform = glm::translate(glm::mat4(1.0f), glm::vec3(80, 0, 0)) * glm::scale(glm::mat4(1.0f), glm::vec3(6));
     orbit1->addChild(planet1);
     rootNode->addChild(orbit1);
@@ -214,7 +263,7 @@ int main() {
     orbit2->setRotationSpeed(2.5f);
     auto planet2 = std::make_shared<SceneNode>();
     planet2->setModel(shinyPlanet);
-	planet2->setRotationSpeed(10.0f);
+    planet2->setRotationSpeed(10.0f);
     planet2->transform = glm::translate(glm::mat4(1.0f), glm::vec3(-130, 0, 50)) * glm::scale(glm::mat4(1.0f), glm::vec3(0.1));
     orbit2->addChild(planet2);
     rootNode->addChild(orbit2);
@@ -250,9 +299,14 @@ int main() {
         "../../../../project/shaders/sky.frag");
 
     Model skySphere("../../../../project/models/galaxy_skybox/inside_galaxy.glb");
-    std::cout << "[DEBUG] SkySphere MeshCount: " << skySphere.getMeshCount() << std::endl; // Model laden Check
+    std::cout << "[DEBUG] SkySphere MeshCount: " << skySphere.getMeshCount() << std::endl;
     unsigned int skyTex = loadTexture(
         "../../../../project/models/galaxy_skybox/inside_galaxy.png"
+    );
+
+    // Sonnen-Textur separat laden für direkten Zugriff
+    unsigned int sunTexture = loadTexture(
+        "../../../../project/models/planets/sun_diffuse.png"  // Anpassen an den tatsächlichen Pfad
     );
 
     while (!glfwWindowShouldClose(window)) {
@@ -276,8 +330,6 @@ int main() {
         glm::mat4 view = cameraNode->getCamera().getViewMatrix();
         glm::mat4 proj = cameraNode->getCamera().getProjectionMatrix(1280.0f / 720.0f);
 
-
-
         // 6) Skybox rendern
         if (showSkybox) {
             GLboolean wasCull = glIsEnabled(GL_CULL_FACE);
@@ -286,53 +338,63 @@ int main() {
             skyShader.use();
             skyShader.setMat4("view", glm::mat4(glm::mat3(view)));
             skyShader.setMat4("projection", proj);
-            glm::mat4 skyModel =                                    // Skybox skallieren
-                glm::scale(glm::mat4(1.0f), glm::vec3(2000.0f));
+            glm::mat4 skyModel = glm::scale(glm::mat4(1.0f), glm::vec3(2000.0f));
             glActiveTexture(GL_TEXTURE0);
             glBindTexture(GL_TEXTURE_2D, skyTex);
             skyShader.setInt("equirectangularMap", 0);
-            //skySphere.draw(skyShader.ID, glm::mat4(1.0f));
             skySphere.draw(skyShader.ID, skyModel);
             glDepthMask(GL_TRUE);
             if (wasCull) glEnable(GL_CULL_FACE);
         }
 
-        glm::vec3 lightPos = glm::vec3(0);
-        
         // 7) Modelle rendern
+        // Planeten mit modelShader rendern (Sonne ist nie im Szenengraph, also müssen wir sie nicht entfernen)
         modelShader.use();
         modelShader.setInt("texture_diffuse", 0);
-        modelShader.setVec3("lightDir", enableDirectionalLight ? lightDirection : glm::vec3(0.0f));
-        modelShader.setVec3("lightColor", glm::vec3(1.0f));
+        modelShader.setVec3("lightDir", lightDirection);
+        modelShader.setVec3("lightColor", glm::vec3(1.0f, 0.9f, 0.7f));
         modelShader.setVec3("viewPos", cameraNode->getCamera().getPosition());
         modelShader.setMat4("view", view);
         modelShader.setMat4("projection", proj);
+        modelShader.setBool("enableDirectionalLight", enableDirectionalLight);
+
+        // Punktlichter an den Shader übergeben
+        modelShader.setInt("numPointLights", pointLights.size());
+        for (unsigned int i = 0; i < pointLights.size() && i < 4; i++) {
+            std::string number = std::to_string(i);
+            modelShader.setVec3("pointLights[" + number + "].position", pointLights[i].position);
+            modelShader.setVec3("pointLights[" + number + "].ambient", pointLights[i].ambient);
+            modelShader.setVec3("pointLights[" + number + "].diffuse", pointLights[i].diffuse);
+            modelShader.setVec3("pointLights[" + number + "].specular", pointLights[i].specular);
+            modelShader.setFloat("pointLights[" + number + "].constant", pointLights[i].constant);
+            modelShader.setFloat("pointLights[" + number + "].linear", pointLights[i].linear);
+            modelShader.setFloat("pointLights[" + number + "].quadratic", pointLights[i].quadratic);
+        }
+
+        // Planeten zeichnen (ohne Sonne)
         rootNode->draw(glm::mat4(1.0f), modelShader.ID);
 
-        // 7) Modelle rendern
+        // KORRIGIERT: Sonne wieder zum SceneGraph hinzufügen
+        rootNode->addChild(sunNode);
 
-        //// Planeten mit modelShader rendern
-        //modelShader.use();
-        //modelShader.setVec3("lightDir", lightDirection);
-        //modelShader.setVec3("lightPos", glm::vec3(0.0f)); // z. B. Sonnenzentrum
-        //modelShader.setVec3("lightColor", glm::vec3(1.0f));
-        //modelShader.setVec3("viewPos", cameraNode->getCamera().getPosition());
-        //modelShader.setBool("isDirectional", enableDirectionalLight); // UI gesteuert
+        // DEBUG-TEST: Verwenden Sie einen festen Farbwert für die Sonne, um zu testen
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, 0); // Unbind alle Texturen
+        glActiveTexture(GL_TEXTURE1);
+        glBindTexture(GL_TEXTURE_2D, 0); // Unbind alle Texturen
 
+        // Verwenden Sie den modelShader für die Sonne als Test
+        modelShader.use();
+        modelShader.setMat4("view", view);
+        modelShader.setMat4("projection", proj);
+        modelShader.setVec3("viewPos", cameraNode->getCamera().getPosition());
+        // Hier eine auffällige Farbe verwenden, damit Sie sehen können, ob es die Sonne ist
+        modelShader.setVec3("lightColor", glm::vec3(1.0f, 0.0f, 0.0f)); // Reines Rot
 
-        //// Da die Sonne separat gerendert wird, entfernen wir sie temporär aus dem rootNode
-        //rootNode->removeChild(sunNode);
-        //rootNode->draw(glm::mat4(1.0f), modelShader.ID);
-        //rootNode->addChild(sunNode); // Sonne wieder hinzufügen
+        sunNode->draw(glm::mat4(1.0f), modelShader.ID);
 
-        //// Sonne mit sunShader rendern
-        //sunShader.use();
-        //sunShader.setVec3("lightPos", glm::vec3(0.0f));  // Zentrum
-        //sunShader.setVec3("camPos", cameraNode->getCamera().getPosition());
-        //sunShader.setVec3("lightColor", glm::vec3(1.0f));
-        //sunShader.setMat4("view", view);
-        //sunShader.setMat4("projection", proj);
-        //sunNode->draw(glm::mat4(1.0f), sunShader.ID);
+        // Füge die Sonne wieder zum Scene Graph hinzu für Update-Operationen im nächsten Frame
+        rootNode->addChild(sunNode);
 
 
 
@@ -388,13 +450,12 @@ int main() {
 
 
         // 8) ImGui zeichnen (mit Camera aus dem Graph)
-        renderImGui(cameraNode->getCamera());
+        renderImGui(cameraNode->getCamera(), pointLights);
 
         // 9) Buffer swap
         glfwSwapBuffers(window);
 
         processInput(window, cameraNode->getCamera(), delta);
-
     }
 
     // 10) Cleanup
