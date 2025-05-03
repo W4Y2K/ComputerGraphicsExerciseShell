@@ -14,6 +14,8 @@
 #include "render/Shader.h"
 #include "core/SceneNode.h"
 #include "core/CameraNode.h"
+#include <SplinePath.h>
+#include <SplineRenderer.h>
 
 // Globals
 bool isWireframe = false; 
@@ -233,6 +235,13 @@ int main() {
 
 
 
+
+
+
+
+
+
+
     float lastFrame = static_cast<float>(glfwGetTime());
 
     // Galaxy Skybox Setup
@@ -324,6 +333,59 @@ int main() {
         //sunShader.setMat4("view", view);
         //sunShader.setMat4("projection", proj);
         //sunNode->draw(glm::mat4(1.0f), sunShader.ID);
+
+
+
+
+        SplinePath orbitPath;
+        for (int i = 0; i < 9; ++i) {
+            float angle = glm::radians(i * 40.0f); // 0° – 320°
+            float radius = 80.0f;
+            orbitPath.addPoint(glm::vec3(cos(angle) * radius, 0.0f, sin(angle) * radius));
+        }
+
+        // ❗ Wiederhole Punkte für geschlossene Kurve
+        orbitPath.addPoint(orbitPath.getControlPoints()[1]);
+        orbitPath.addPoint(orbitPath.getControlPoints()[2]);
+
+        SplineRenderer orbitRenderer;
+        orbitRenderer.setSpline(orbitPath);
+        orbitRenderer.upload();
+
+
+        SplinePath orbitPath2;
+        float radius2 = 130.0f;
+        for (int i = 0; i < 9; ++i) {
+            float angle = glm::radians(i * 40.0f);
+            orbitPath2.addPoint(glm::vec3(cos(angle) * radius2, 0.0f, sin(angle) * radius2));
+        }
+        // Spline schließen
+        orbitPath2.addPoint(orbitPath2.getControlPoints()[1]);
+        orbitPath2.addPoint(orbitPath2.getControlPoints()[2]);
+
+        SplineRenderer renderer2;
+        renderer2.setSpline(orbitPath2);
+        renderer2.upload();
+
+
+
+        // Add the following line to define and initialize the splineShader object  
+        Shader splineShader(  
+           "../../../../project/shaders/spline.vert",  
+           "../../../../project/shaders/spline.frag"  
+        );
+
+        splineShader.use();
+        splineShader.setVec3("color", glm::vec3(1.0, 0.5, 0.2));  // für Orbit 1
+        splineShader.setVec3("color", glm::vec3(0.2, 0.8, 1.0));  // für Orbit 2       
+
+
+        // Orbit 1
+        orbitRenderer.draw(splineShader, view, proj);
+
+        // Orbit 2
+        renderer2.draw(splineShader, view, proj);
+
 
         // 8) ImGui zeichnen (mit Camera aus dem Graph)
         renderImGui(cameraNode->getCamera());
