@@ -6,16 +6,14 @@ Uebersicht Punkte:
 vermutlich 50pkt Mindestanforderung
 - 5 Punkte: Skybox
 - 5 Punkte: Point Lights
-- 5 Punkte: Raytracing Spheres
-- 5 Punkte: Camera Modes (Fertig)
+- 5 Punkte: Camera Modes (Fov ... muss noch wieder implementiert werden)
 - 5 Punkte: Animation Nodes (teilweise implementiert), Oszillierende Translation fehlt
-- 5 Punkte: Alpha Mask oder Normal Map
-- 20 Punkte: Shadows
+- 10 Punkte: B-Spline Camera
+- 10 Punkte: Spline Mesh
+- 10 Punkte: Spline UI
+
 
 Todo:
-7.2.1 Raytracing Spheres (5P)
-Implementieren Sie einen Raytracer zur Darstellung von Kugeln. Berechnen Sie Schnittpunkte entweder in einem FragmentShader oder ComputeShader. Die Schattierung der Kugeln sollte der Qualitaet der Beleuchtung der rasterierten Objekte entsprechen.
-
 7.3.1 Camera Modes (5P) 
 Implementieren Sie verschiedene weitere Kameramodi, wie eine 6Degrees-of-Freedom-Camera (Horizontale, Vertikale, Laterale Bewegung, sowie Roll, Pitch und Yaw), um die Navigation innerhalb der Szene zu verbessern. Fuegen Sie zudem Optionen hinzu, das FieldOfView und die Far- und Near-Clipping Plane im GUI einzustellen.
 
@@ -25,20 +23,18 @@ Fuegen Sie verschiedene Animation Nodes hinzu, um die Szene zu bewegen:
 - Oszillierende Rotation um eine Achse
 - Oszillierende Translation entlang einer Achse
 
-7.4.1 Spline Renderer (15P)
-Implementieren Sie ein Rendering-System fuer Splines, um gekruemmte Linien und Pfade praezise darzustellen. Nutzen Sie mathematische Interpolationstechniken fuer eine exakte Visualisierung.
+7.4.1 Kamerafahrt mit B-Splines (10P)
+F¨ugen sie eine Kamerafahrt durch die Scene hinzu. Diese sollte entweder von
+alleine starten und sich wiederholen oder durch einen Tastendruck abgespielt
+werden k¨onnen. Alternativ k¨onnen sie auch andere Objekt eintlang einer BSpline animieren.
 
-7.4.2 Spline UI (10P)
-Erstellen Sie eine interaktive Benutzeroberflaeche zur Steuerung von Splines. Ermoeglichen Sie Nutzern das Erstellen, Bearbeiten und Anpassen von Kurven innerhalb der Szene. Die erstellten Splines sollten speicherbar sein und wieder geladen werden koennen.
+7.4.2 Spline Mesh (10P)
+Implementieren Sie ein Rendering-System f¨ur Splines. Erstellen sie ein 2D oder
+3D mesh entlang einer spline. Zur Evaluierung der einezlen Kurven k¨onnen sie
+funktionen aus glm :: gtx :: spline benutzen.
 
-8.5 Shadows (20P)
-Implementieren Sie ShadowMapping fuer ihre globale Lichtquelle und/oder Punktlichter.
-Guides und Ressourcen:
-- Learn OpenGL
-- Shadow Mapping - Tutorial
-
-7.1.1 Normal Map (5P)
-Implementieren Sie Normal Mapping, um detaillierte Oberflaechenstrukturen ohne zusaetzliche Geometrie darzustellen. Nutzen Sie diese Technik, um realistischere Materialeffekte durch verbesserte Beleuchtung zu erzeugen.
-
-7.1.2 Alpha Mask (5P)
-Ermoeglichen Sie Alpha Masking, um Teile einer Textur nicht darzustellen. Nutzen Sie diese Technik fuer Objekte wie Blaetter, Buesche oder Baeume. Es ist ausreichend, Alpha Clipping einzubauen.
+7.4.3 Spline UI (10P)
+Erstellen Sie eine interaktive Benutzeroberfl¨ache zur Steuerung von Splines.
+Erm¨oglichen Sie Nutzern das Erstellen, Bearbeiten und Anpassen von Kurven
+innerhalb der Szene. Die erstellten Splines sollten speicherbar sein und wieder
+geladen werden k¨onnen
