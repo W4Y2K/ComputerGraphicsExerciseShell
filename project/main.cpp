@@ -84,6 +84,18 @@ void renderImGui(Camera& camera, std::vector<PointLight>& pointLights) {
     if (ImGui::CollapsingHeader("Kamera", ImGuiTreeNodeFlags_DefaultOpen)) {
         ImGui::SliderFloat("Kamera-Geschwindigkeit", &cameraSpeed, 10.0f, 500.0f);
         if (ImGui::Button("Kamera zurücksetzen")) camera.reset();
+
+        float fov = camera.getFOV();
+        if (ImGui::SliderFloat("Field of View", &fov, 10.0f, 120.0f))
+            camera.setFOV(fov);  // 🆕 Änderung
+
+        float nearClip = camera.getNearPlane();
+        if (ImGui::SliderFloat("Near Plane", &nearClip, 0.01f, 10.0f))
+            camera.setNearPlane(nearClip);  // 🆕 Änderung
+
+        float farClip = camera.getFarPlane();
+        if (ImGui::SliderFloat("Far Plane", &farClip, 100.0f, 10000.0f))
+            camera.setFarPlane(farClip);  // 🆕 Änderung
     }
 
     // Allgemeine Beleuchtungseinstellungen
