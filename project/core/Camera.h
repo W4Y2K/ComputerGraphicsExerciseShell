@@ -25,17 +25,17 @@ public:
     void reset();
     glm::vec3 getPosition() const; // aktuelle Welt-position
 
-    public:  
-       glm::vec3& getTarget() {  
-           return target;  
-       }
-       void moveTarget(const glm::vec3& offset) {
-           target += offset;
-       }
-       void move(const glm::vec3& offset) {
-           target += offset;
-       }
+    glm::vec3& getTarget() {
+        return target;
+    }
+    void moveTarget(const glm::vec3& offset) {
+        target += offset;
+    }
+    void move(const glm::vec3& offset) {
+        target += offset;
+    }
 
+    void setFromExternalPosition(const glm::vec3& position, const glm::vec3& targetPos);
 
 private:
     GLFWwindow* window;

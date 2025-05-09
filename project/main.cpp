@@ -25,6 +25,13 @@ bool enableDirectionalLight = true;
 glm::vec3 lightDirection(0.0f, -1.0f, -1.0f);
 float cameraSpeed = 100.0f;
 
+bool animateCamera = false;
+float cameraSplineTime = 0.0f;
+float cameraSpeedFactor = 0.05f;  // Geschwindigkeit der Fahrt
+SplinePath cameraPath;
+
+
+
 struct PointLight {
     glm::vec3 position;
 
@@ -85,6 +92,15 @@ void renderImGui(Camera& camera, std::vector<PointLight>& pointLights) {
         ImGui::SliderFloat("Kamera-Geschwindigkeit", &cameraSpeed, 10.0f, 500.0f);
         if (ImGui::Button("Kamera zurücksetzen")) camera.reset();
     }
+    
+    if (ImGui::Button("Starte Kamerafahrt")) {
+        animateCamera = true;
+        cameraSplineTime = 0.0f; // Zurücksetzen
+    }
+    if (ImGui::Button("Stoppe Kamerafahrt")) {
+        animateCamera = false;
+    }
+
 
     // Allgemeine Beleuchtungseinstellungen
     if (ImGui::CollapsingHeader("Allgemeine Beleuchtung", ImGuiTreeNodeFlags_DefaultOpen)) {
@@ -207,6 +223,22 @@ int main() {
     cameraNode->transform =
         glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 100.0f, 300.0f));
     rootNode->addChild(cameraNode);
+
+
+
+    float outerRadius = 400.0f;
+    float height = 200.0f;
+    int camCount = 12;
+    for (int i = 0; i < camCount; ++i) {
+        float angle = glm::radians(i * 360.0f / camCount);
+        float x = cos(angle) * outerRadius;
+        float z = sin(angle) * outerRadius;
+        cameraPath.addPoint(glm::vec3(x, height, z));
+    }
+    cameraPath.addPoint(cameraPath.getControlPoints()[0]);
+    cameraPath.addPoint(cameraPath.getControlPoints()[1]);
+
+
 
     Shader modelShader(
         "../../../../project/shaders/model.vert",
@@ -466,6 +498,22 @@ int main() {
 
         // Orbit 2
         renderer2.draw(splineShader, view, proj);
+
+
+        if (animateCamera) {
+            const auto& points = cameraPath.getInterpolatedPoints(20);
+            cameraSplineTime += delta * cameraSpeedFactor;
+            if (cameraSplineTime > 1.0f) cameraSplineTime = 0.0f;
+
+            int index = static_cast<int>(cameraSplineTime * points.size());
+            if (index >= points.size()) index = points.size() - 1;
+
+            glm::vec3 camPos = points[index];
+            glm::vec3 lookAt = glm::vec3(0, 0, 0);
+            cameraNode->getCamera().setFromExternalPosition(camPos, lookAt);
+        }
+
+
 
 
         // 8) ImGui zeichnen (mit Camera aus dem Graph)
