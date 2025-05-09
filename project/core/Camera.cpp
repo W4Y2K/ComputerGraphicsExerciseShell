@@ -85,3 +85,11 @@ glm::vec3 Camera::getPosition() const {
 
     return target - dir * distance;
 }
+
+void Camera::setFromExternalPosition(const glm::vec3& position, const glm::vec3& targetPos) {
+    target = targetPos;
+    glm::vec3 dir = glm::normalize(target - position);
+    distance = glm::length(target - position);
+    pitch = glm::degrees(asin(dir.y));
+    yaw = glm::degrees(atan2(dir.z, dir.x));
+}
