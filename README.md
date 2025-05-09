@@ -4,13 +4,13 @@ Wie viel noch wegen Kamera Modes?
 
 Uebersicht Punkte:
 vermutlich 50pkt Mindestanforderung
-- 5 Punkte: Skybox
-- 5 Punkte: Point Lights
+- 5 Punkte: Skybox (fertig)
+- 5 Punkte: Point Lights (fertig)
 - 5 Punkte: Camera Modes (Fov ... muss noch wieder implementiert werden)
-- 5 Punkte: Animation Nodes (teilweise implementiert), Oszillierende Translation fehlt
-- 10 Punkte: B-Spline Camera
-- 10 Punkte: Spline Mesh
-- 10 Punkte: Spline UI
+- 5 Punkte: Animation Nodes (fertig, Jonas fixt sonnenrotation)
+- 10 Punkte: B-Spline Camera (fertig)
+- 10 Punkte: Spline Mesh (fertig)
+- 10 Punkte: Spline UI (noch nicht implementiert)
 
 
 Todo:
