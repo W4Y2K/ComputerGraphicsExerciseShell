@@ -17,6 +17,7 @@
 #include "core/CameraNode.h"
 #include <SplinePath.h>
 #include <SplineRenderer.h>
+#include <fstream>
 
 // Globals
 bool isWireframe = false;
@@ -30,7 +31,10 @@ float cameraSplineTime = 0.0f;
 float cameraSpeedFactor = 0.05f;  // Geschwindigkeit der Fahrt
 SplinePath cameraPath;
 
-
+// Spline UI
+SplinePath userSplinePath;
+std::unique_ptr<SplineRenderer> userSplineRenderer;
+bool showUserSpline = true;
 
 struct PointLight {
     glm::vec3 position;
@@ -163,6 +167,57 @@ void renderImGui(Camera& camera, std::vector<PointLight>& pointLights) {
                 ImGui::TreePop();
             }
         }
+
+    }
+
+    // Benutzerdefinierte Spline UI
+    if (ImGui::CollapsingHeader("Benutzerdefinierter Spline", ImGuiTreeNodeFlags_DefaultOpen)) {
+        static glm::vec3 newPoint = glm::vec3(0.0f);
+
+        if (ImGui::Button("Punkt hinzufügen")) {
+            userSplinePath.addPoint(newPoint);
+            userSplineRenderer->setSpline(userSplinePath);
+            userSplineRenderer->upload();
+        }
+        ImGui::InputFloat3("Neuer Punkt", glm::value_ptr(newPoint));
+
+        if (ImGui::Button("Spline löschen")) {
+            userSplinePath.clearPoints();
+            userSplineRenderer->setSpline(userSplinePath);
+            userSplineRenderer->upload();
+        }
+
+        auto& cps = const_cast<std::vector<glm::vec3>&>(userSplinePath.getControlPoints());
+        for (size_t i = 0; i < cps.size(); ++i) {
+            ImGui::PushID(static_cast<int>(i));
+            ImGui::InputFloat3("Punkt", glm::value_ptr(cps[i]));
+            if (ImGui::Button("Entfernen")) {
+                cps.erase(cps.begin() + i);
+                userSplineRenderer->setSpline(userSplinePath);
+                userSplineRenderer->upload();
+                ImGui::PopID();
+                break;
+            }
+            ImGui::PopID();
+        }
+
+        if (ImGui::Button("Spline speichern")) {
+            std::ofstream out("userspline.txt");
+            for (const auto& p : cps) {
+                out << p.x << " " << p.y << " " << p.z << "\n";
+            }
+        }
+
+        if (ImGui::Button("Spline laden")) {
+            std::ifstream in("userspline.txt");
+            glm::vec3 p;
+            cps.clear();
+            while (in >> p.x >> p.y >> p.z) {
+                cps.push_back(p);
+            }
+            userSplineRenderer->setSpline(userSplinePath);
+            userSplineRenderer->upload();
+        }
     }
 
     ImGui::End();
@@ -228,6 +283,8 @@ int main() {
     glFrontFace(GL_CCW);
 
     setupImGui(window);
+
+    userSplineRenderer = std::make_unique<SplineRenderer>(); // Initialisierung Spline UI
 
     // 5) Kamera und Shader anlegen
     auto rootNode = std::make_shared<SceneNode>();
@@ -327,14 +384,6 @@ int main() {
     rootNode->addChild(greyShipNode);
 
 
-
-
-
-
-
-
-
-
     float lastFrame = static_cast<float>(glfwGetTime());
 
     // Galaxy Skybox Setup
@@ -353,6 +402,7 @@ int main() {
         "../../../../project/models/planets/sun_diffuse.png"  // Anpassen an den tatsächlichen Pfad
     );
 
+    
     while (!glfwWindowShouldClose(window)) {
         // 1) Delta-Time berechnen
         float current = static_cast<float>(glfwGetTime());
@@ -511,7 +561,14 @@ int main() {
         // Orbit 2
         renderer2.draw(splineShader, view, proj);
 
+        // Spline UI
+        if (showUserSpline) {
+            splineShader.use();
+            splineShader.setVec3("color", glm::vec3(0.9f, 0.2f, 0.2f));
+            userSplineRenderer->draw(splineShader, view, proj);
+        }
 
+        // Kamerafahrt
         if (animateCamera) {
             const auto& points = cameraPath.getInterpolatedPoints(20);
             cameraSplineTime += delta * cameraSpeedFactor;
