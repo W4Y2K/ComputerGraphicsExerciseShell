@@ -25,6 +25,7 @@ bool showSkybox = true;
 bool enableDirectionalLight = true;
 glm::vec3 lightDirection(0.0f, -1.0f, -1.0f);
 float cameraSpeed = 100.0f;
+float sunRotationAngle = 90.0f;
 
 bool animateCamera = false;
 float cameraSplineTime = 0.0f;
@@ -342,11 +343,11 @@ int main() {
     auto greySpaceShip = std::make_shared<Model>("../../../../project/models/spaceships/spaceship_gray.glb");
     auto ufo = std::make_shared<Model>("../../../../project/models/spaceships/ufo.glb");
 
-    auto sunNode = std::make_shared<SceneNode>();
+    auto sunNode = std::make_shared<SelfRotatingNode>();
     sunNode->setModel(sunPlanet);
-
     sunNode->transform = glm::scale(glm::mat4(1.0f), glm::vec3(0.3f));
-    sunNode->setRotationSpeed(10.0f); // This will handle y-axis rotation
+    sunNode->setRotationSpeed(10.0f);
+
 
     // Erstelle die Point Lights
     std::vector<PointLight> pointLights;
@@ -508,30 +509,43 @@ int main() {
         rootNode->draw(glm::mat4(1.0f), modelShader.ID);
 
         // Nun die Sonne mit dem speziellen Sonnen-Shader zeichnen
+       // Rotation aktualisieren
+        sunRotationAngle += delta * 10.0f;
+        if (sunRotationAngle > 360.0f)
+            sunRotationAngle -= 360.0f;
+
+        glm::mat4 sunModelMatrix = glm::mat4(1.0f);
+
+        // Modell verschieben (Translation *vor* Rotation)
+        sunModelMatrix = glm::translate(sunModelMatrix, glm::vec3(0.0f, 0.0f, 0.0f));
+
+        // Dann Rotation (um die eigene Achse)
+        sunModelMatrix = glm::rotate(sunModelMatrix,
+            glm::radians(sunRotationAngle),
+            glm::vec3(0.0f, 1.0f, 0.0f));
+
+        // Dann Skalierung
+        sunModelMatrix = glm::scale(sunModelMatrix, glm::vec3(0.9f));
+
+        // Sonnen-Shader setzen
         sunShader.use();
         sunShader.setMat4("view", view);
         sunShader.setMat4("projection", proj);
         sunShader.setVec3("viewPos", cameraNode->getCamera().getPosition());
-        sunShader.setVec3("lightPos", glm::vec3(0.0f, 0.0f, 0.0f)); // Im Zentrum
+        sunShader.setVec3("lightPos", glm::vec3(0.0f, 0.0f, 0.0f));
         sunShader.setVec3("lightColor", glm::vec3(1.0f, 0.9f, 0.7f));
+        sunShader.setMat4("model", sunModelMatrix);
 
+        // Textur binden
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, sunDiffuse);
         sunShader.setInt("tex0", 0);
 
-
-
-        // Rotationsmatrix für die Sonne berechnen
-        glm::mat4 sunRotation = glm::rotate(glm::mat4(1.0f),
-            glm::radians(sunNode->getRotationSpeed() * current), // Use current time for continuous rotation
-            glm::vec3(0.0f, 1.0f, 0.0f));
-        glm::mat4 sunModelMatrix = sunRotation * sunNode->transform;
-
-        // Vor dem Zeichnen der Sonne: Additives Blending aktivieren für einen Glow-Effekt
+        // Additives Blending aktivieren
         glEnable(GL_BLEND);
-        glBlendFunc(GL_SRC_ALPHA, GL_ONE);  // Additives Blending für Glow
-        GLint check = glGetUniformLocation(sunShader.ID, "model");
-        std::cout << "[DEBUG] sunShader 'model' location: " << check << std::endl;
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE);
+
+        // Zeichnen
         sunPlanet->draw(sunShader.ID, sunModelMatrix);
 
         // Blending zurücksetzen

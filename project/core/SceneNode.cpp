@@ -1,4 +1,4 @@
-#include "SceneNode.h"
+﻿#include "SceneNode.h"
 #include "Model.h"
 
 SceneNode::SceneNode() {
@@ -40,7 +40,7 @@ void SceneNode::draw(const glm::mat4& parentTransform, unsigned int shaderID) {
     // Zuerst rotieren, dann positionieren -> Rotation im lokalen Ursprung
     glm::mat4 localTransform = transform * rotation;
 
-    // Eltern-Transformation �bernehmen
+    // Eltern-Transformation übernehmen
     glm::mat4 globalTransform = parentTransform * localTransform;
 
     if (model) {
@@ -60,7 +60,26 @@ float SceneNode::getRotationSpeed() const {
     return rotationSpeed;
 }
 
-// -------- OscillatingRotationNode --------
+
+void SelfRotatingNode::draw(const glm::mat4& parentTransform, unsigned int shaderID) {
+    glm::mat4 rotation = glm::rotate(glm::mat4(1.0f),
+        glm::radians(currentRotation),
+        glm::vec3(0.0f, 1.0f, 0.0f));
+
+    // Rotation zuerst, dann transform → lokale Rotation
+    glm::mat4 localTransform = rotation * transform;
+
+    glm::mat4 globalTransform = parentTransform * localTransform;
+
+    if (model) {
+        model->draw(shaderID, globalTransform);
+    }
+
+    for (auto& child : children) {
+        child->draw(globalTransform, shaderID);
+    }
+}
+
 OscillatingRotationNode::OscillatingRotationNode(glm::vec3 basePosition, glm::vec3 axis, float speed, float maxAngle)
     : basePosition(basePosition), axis(glm::normalize(axis)), speed(speed), maxAngle(maxAngle) {
 }

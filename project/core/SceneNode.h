@@ -24,7 +24,7 @@ public:
 
     glm::mat4 transform;  // Lokale Transformation (Translation, Rotation etc.)
 
-private:
+protected:
     std::shared_ptr<Model> model;
     std::vector<std::shared_ptr<SceneNode>> children;
 
@@ -33,12 +33,18 @@ private:
     float currentRotation = 0.0f;
 };
 
+class SelfRotatingNode : public SceneNode {
+public:
+    void draw(const glm::mat4& parentTransform, unsigned int shaderID) override;
+};
+
+
 class OscillatingRotationNode : public SceneNode {
 public:
     OscillatingRotationNode(glm::vec3 basePosition, glm::vec3 axis, float speed, float maxAngle);
     void update(float deltaTime) override;
 
-private:
+protected:
     glm::vec3 basePosition;
     glm::vec3 axis;
     float speed;
@@ -51,7 +57,7 @@ public:
     OscillatingTranslationNode(glm::vec3 basePosition, glm::vec3 direction, float speed, float amplitude);
     void update(float deltaTime) override;
 
-private:
+protected:
     glm::vec3 basePosition;
     glm::vec3 dir;
     float speed;
