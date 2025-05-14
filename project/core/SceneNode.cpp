@@ -2,15 +2,15 @@
 #include "Model.h"
 
 SceneNode::SceneNode() {
-   transform = glm::mat4(1.0f);
+    transform = glm::mat4(1.0f);
 }
 
 void SceneNode::setModel(std::shared_ptr<Model> model) {
-   this->model = model;
+    this->model = model;
 }
 
 void SceneNode::addChild(std::shared_ptr<SceneNode> child) {
-   children.push_back(child);
+    children.push_back(child);
 }
 
 void SceneNode::removeChild(std::shared_ptr<SceneNode> child) {
@@ -19,7 +19,6 @@ void SceneNode::removeChild(std::shared_ptr<SceneNode> child) {
         children.erase(it);
     }
 }
-
 
 void SceneNode::update(float deltaTime) {
     if (rotationSpeed != 0.0f) {
@@ -32,33 +31,34 @@ void SceneNode::update(float deltaTime) {
     }
 }
 
-
-
 void SceneNode::draw(const glm::mat4& parentTransform, unsigned int shaderID) {
-    glm::mat4 rotation =
-        glm::rotate(glm::mat4(1.0f),
-            glm::radians(currentRotation),
-            glm::vec3(0.0f, 1.0f, 0.0f));
-    glm::mat4 globalTransform = parentTransform * transform * rotation;
+    // Rotation um die eigene Achse im lokalen Ursprung
+    glm::mat4 rotation = glm::rotate(glm::mat4(1.0f),
+        glm::radians(currentRotation),
+        glm::vec3(0.0f, 1.0f, 0.0f));
 
+    // Zuerst rotieren, dann positionieren -> Rotation im lokalen Ursprung
+    glm::mat4 localTransform = transform * rotation;
 
-   if (model) {
-       model->draw(shaderID, globalTransform);
-   }
+    // Eltern-Transformation übernehmen
+    glm::mat4 globalTransform = parentTransform * localTransform;
 
-   for (auto& child : children) {
-       child->draw(globalTransform, shaderID);
-   }
+    if (model) {
+        model->draw(shaderID, globalTransform);
+    }
+
+    for (auto& child : children) {
+        child->draw(globalTransform, shaderID);
+    }
 }
 
 void SceneNode::setRotationSpeed(float speed) {
-   rotationSpeed = speed;
+    rotationSpeed = speed;
 }
 
 float SceneNode::getRotationSpeed() const {
-   return rotationSpeed;
+    return rotationSpeed;
 }
-
 
 // -------- OscillatingRotationNode --------
 OscillatingRotationNode::OscillatingRotationNode(glm::vec3 basePosition, glm::vec3 axis, float speed, float maxAngle)
@@ -73,8 +73,6 @@ void OscillatingRotationNode::update(float deltaTime) {
     SceneNode::update(deltaTime);
 }
 
-
-
 // -------- OscillatingTranslationNode --------
 OscillatingTranslationNode::OscillatingTranslationNode(glm::vec3 basePosition, glm::vec3 direction, float speed, float amplitude)
     : basePosition(basePosition), dir(glm::normalize(direction)), speed(speed), amplitude(amplitude) {
@@ -87,6 +85,3 @@ void OscillatingTranslationNode::update(float deltaTime) {
     transform = glm::translate(glm::mat4(1.0f), basePosition + movement);
     SceneNode::update(deltaTime);
 }
-
-
-

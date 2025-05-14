@@ -11,7 +11,7 @@ uniform vec3 lightColor;
 uniform sampler2D tex0; // diffuse texture
 uniform sampler2D tex1; // specular texture map
 
-out vec4 FragColor;
+out vec4 outColor;
 
 void main()
 {
@@ -36,14 +36,13 @@ void main()
     float specMap = texture(tex1, texCoord).r;
 
     vec3 lighting = lightColor * inten;
-    vec3 emission = texColor * 1.0; // Sonnenemission
+    vec3 emission = texColor * 1.0;
 
     vec3 result = texColor * lighting * (ambient + diff) +
                   vec3(specularStrength * spec * specMap) * lighting +
                   emission;
 
-    // Bloom-Vorbereitung: Helligkeit künstlich erhöhen
     result = min(result * 1.2, vec3(1.0));
 
-    FragColor = vec4(result, 1.0);
+    outColor = vec4(result, 1.0);
 }

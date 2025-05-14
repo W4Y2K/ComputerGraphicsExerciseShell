@@ -108,7 +108,7 @@ void renderImGui(Camera& camera, std::vector<PointLight>& pointLights) {
         if (ImGui::SliderFloat("Far Plane", &farClip, 100.0f, 10000.0f))
             camera.setFarPlane(farClip);  // 🆕 Änderung
     }
-    
+
     if (ImGui::Button("Starte Kamerafahrt")) {
         animateCamera = true;
         cameraSplineTime = 0.0f; // Zurücksetzen
@@ -232,7 +232,20 @@ unsigned int loadTexture(const char* path) {
     unsigned int id;
     glGenTextures(1, &id);
     int w, h, c;
+
+    // Debug-Ausgabe vor dem Laden
+    std::cout << "Loading texture from: " << path << std::endl;
+
     unsigned char* data = stbi_load(path, &w, &h, &c, 0);
+    if (!data) {
+        std::cerr << "Failed to load texture: " << path << std::endl;
+        std::cerr << "stbi error: " << stbi_failure_reason() << std::endl;
+        return 0;
+    }
+
+    // Debug-Ausgabe nach erfolgreichem Laden
+    std::cout << "Texture loaded: " << w << "x" << h << " channels: " << c << std::endl;
+
     GLenum format = (c == 4 ? GL_RGBA : GL_RGB);
     glBindTexture(GL_TEXTURE_2D, id);
     glTexImage2D(GL_TEXTURE_2D, 0, format, w, h, 0, format, GL_UNSIGNED_BYTE, data);
@@ -313,6 +326,8 @@ int main() {
         "../../../../project/shaders/model.vert",
         "../../../../project/shaders/model.frag"
     );
+
+    // Verbesserte Sonnen-Shader mit besseren Dateipfaden
     Shader sunShader(
         "../../../../project/shaders/sun.vert",
         "../../../../project/shaders/sun.frag"
@@ -329,10 +344,9 @@ int main() {
 
     auto sunNode = std::make_shared<SceneNode>();
     sunNode->setModel(sunPlanet);
-    sunNode->transform = glm::translate(glm::mat4(1.0f), glm::vec3(0, 0, 0)) *
-        glm::scale(glm::mat4(1.0f), glm::vec3(0.3f));
-    sunNode->setRotationSpeed(0.05f);
-    // WICHTIG: Fügen Sie die Sonne nicht zum rootNode hinzu, um sie separat zu rendern
+
+    sunNode->transform = glm::scale(glm::mat4(1.0f), glm::vec3(0.3f));
+    sunNode->setRotationSpeed(10.0f); // This will handle y-axis rotation
 
     // Erstelle die Point Lights
     std::vector<PointLight> pointLights;
@@ -397,12 +411,37 @@ int main() {
         "../../../../project/models/galaxy_skybox/inside_galaxy.png"
     );
 
-    // Sonnen-Textur separat laden für direkten Zugriff
-    unsigned int sunTexture = loadTexture(
-        "../../../../project/models/planets/sun_diffuse.png"  // Anpassen an den tatsächlichen Pfad
-    );
+    // Sonnen-Texturen laden
+    unsigned int sunDiffuse = loadTexture("../../../../project/models/sun/textures/SunDiffuse.png");
 
-    
+    // Fallback für Diffuse-Textur
+    if (sunDiffuse == 0) {
+        sunDiffuse = loadTexture("../../../../project/models/planets/sun_diffuse.png");
+    }
+
+
+    // Check if sun textures were found
+    if (sunDiffuse == 0) {
+        // Fallback texture path
+        sunDiffuse = loadTexture("../../../../project/models/planets/sun_diffuse.png");
+    }
+
+    // Alternative Fallback wenn keine Textur gefunden wurde
+    if (sunDiffuse == 0) {
+        std::cerr << "[ERROR] Could not load sun texture, using default texture!" << std::endl;
+        // Einen 1x1 weißen Pixel erstellen
+        unsigned char white[] = { 255, 255, 255, 255 };
+
+        glGenTextures(1, &sunDiffuse);
+        glBindTexture(GL_TEXTURE_2D, sunDiffuse);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 1, 1, 0, GL_RGBA, GL_UNSIGNED_BYTE, white);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    }
+
+
     while (!glfwWindowShouldClose(window)) {
         // 1) Delta-Time berechnen
         float current = static_cast<float>(glfwGetTime());
@@ -442,7 +481,7 @@ int main() {
         }
 
         // 7) Modelle rendern
-        // Planeten mit modelShader rendern (Sonne ist nie im Szenengraph, also müssen wir sie nicht entfernen)
+        // Planeten mit modelShader rendern
         modelShader.use();
         modelShader.setInt("texture_diffuse", 0);
         modelShader.setVec3("lightDir", lightDirection);
@@ -468,30 +507,36 @@ int main() {
         // Planeten zeichnen (ohne Sonne)
         rootNode->draw(glm::mat4(1.0f), modelShader.ID);
 
-        // KORRIGIERT: Sonne wieder zum SceneGraph hinzufügen
-        rootNode->addChild(sunNode);
+        // Nun die Sonne mit dem speziellen Sonnen-Shader zeichnen
+        sunShader.use();
+        sunShader.setMat4("view", view);
+        sunShader.setMat4("projection", proj);
+        sunShader.setVec3("viewPos", cameraNode->getCamera().getPosition());
+        sunShader.setVec3("lightPos", glm::vec3(0.0f, 0.0f, 0.0f)); // Im Zentrum
+        sunShader.setVec3("lightColor", glm::vec3(1.0f, 0.9f, 0.7f));
 
-        // DEBUG-TEST: Verwenden Sie einen festen Farbwert für die Sonne, um zu testen
         glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, 0); // Unbind alle Texturen
-        glActiveTexture(GL_TEXTURE1);
-        glBindTexture(GL_TEXTURE_2D, 0); // Unbind alle Texturen
-
-        // Verwenden Sie den modelShader für die Sonne als Test
-        modelShader.use();
-        modelShader.setMat4("view", view);
-        modelShader.setMat4("projection", proj);
-        modelShader.setVec3("viewPos", cameraNode->getCamera().getPosition());
-        // Hier eine auffällige Farbe verwenden, damit Sie sehen können, ob es die Sonne ist
-        modelShader.setVec3("lightColor", glm::vec3(1.0f, 0.0f, 0.0f)); // Reines Rot
-
-        sunNode->draw(glm::mat4(1.0f), modelShader.ID);
-
-        // Füge die Sonne wieder zum Scene Graph hinzu für Update-Operationen im nächsten Frame
-        rootNode->addChild(sunNode);
+        glBindTexture(GL_TEXTURE_2D, sunDiffuse);
+        sunShader.setInt("tex0", 0);
 
 
 
+        // Rotationsmatrix für die Sonne berechnen
+        glm::mat4 sunRotation = glm::rotate(glm::mat4(1.0f),
+            glm::radians(sunNode->getRotationSpeed() * current), // Use current time for continuous rotation
+            glm::vec3(0.0f, 1.0f, 0.0f));
+        glm::mat4 sunModelMatrix = sunRotation * sunNode->transform;
+
+        // Vor dem Zeichnen der Sonne: Additives Blending aktivieren für einen Glow-Effekt
+        glEnable(GL_BLEND);
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE);  // Additives Blending für Glow
+        GLint check = glGetUniformLocation(sunShader.ID, "model");
+        std::cout << "[DEBUG] sunShader 'model' location: " << check << std::endl;
+        sunPlanet->draw(sunShader.ID, sunModelMatrix);
+
+        // Blending zurücksetzen
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+        glDisable(GL_BLEND);
 
 
 

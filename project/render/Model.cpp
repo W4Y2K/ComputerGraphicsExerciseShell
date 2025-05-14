@@ -11,7 +11,11 @@ Model::Model(const std::string& path) {
 void Model::draw(unsigned int shaderProgram, const glm::mat4& modelMatrix) {
     glUseProgram(shaderProgram);
     GLint locModel = glGetUniformLocation(shaderProgram, "model");
-    glUniformMatrix4fv(locModel, 1, GL_FALSE, &modelMatrix[0][0]);
+    if (locModel >= 0)
+        glUniformMatrix4fv(locModel, 1, GL_FALSE, &modelMatrix[0][0]);
+    else
+        std::cerr << "[WARN] Shaderuniform 'model' nicht gefunden!\n";
+
 
     unsigned int diffuseNr = 1;
     for (const auto& mesh : meshes) {
