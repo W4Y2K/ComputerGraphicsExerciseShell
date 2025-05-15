@@ -100,7 +100,7 @@ void renderImGui(Camera& camera, std::vector<PointLight>& pointLights) {
             cameraSplineTime = 0.0f; // Zurücksetzen
         }
         if (ImGui::Button("Stoppe Kamerafahrt")) {
-            animateCamera = false;aaa
+            animateCamera = false;
         }
 
         ImGui::SliderFloat("Kamera-Geschwindigkeit", &cameraSpeed, 10.0f, 500.0f);
