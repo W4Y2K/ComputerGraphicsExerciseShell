@@ -110,7 +110,7 @@ void Model::loadModel(const std::string& path) {
             } else { 
                 for (auto& v : vertices) v.Normal = {0,1,0};
             }
-)
+
             if (primitive.attributes.count("TEXCOORD_0")) {
                 const auto& uvAccessor = gltfModel.accessors[primitive.attributes.at("TEXCOORD_0")];
                 const auto& uvView = gltfModel.bufferViews[uvAccessor.bufferView];
