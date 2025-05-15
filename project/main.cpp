@@ -19,40 +19,43 @@
 #include <SplineRenderer.h>
 #include <fstream>
 
-// Globals
-bool isWireframe = false;
-bool showSkybox = true;
-bool enableDirectionalLight = true;
-glm::vec3 lightDirection(0.0f, -1.0f, -1.0f);
-float cameraSpeed = 100.0f;
-float sunRotationAngle = 90.0f;
+// ------------- Globale Einstellungen -------------
+bool isWireframe = false;                      // Wireframe-Modus für Debugging
+bool showSkybox = true;                        // Skybox-Anzeige
+bool enableDirectionalLight = true;            // Globales Licht an/aus
+glm::vec3 lightDirection(0.0f, -1.0f, -1.0f);   // Richtung des Richtungslichts
+float cameraSpeed = 100.0f;                    // Bewegungsgeschwindigkeit der Kamera
+float sunRotationAngle = 90.0f;                // Startwinkel der Sonnenrotation
 
-bool animateCamera = false;
-float cameraSplineTime = 0.0f;
-float cameraSpeedFactor = 0.05f;  // Geschwindigkeit der Fahrt
-SplinePath cameraPath;
+bool animateCamera = false;                    // Kamerafahrt aktivieren
+float cameraSplineTime = 0.0f;                 // Fortschritt auf Spline-Kurve
+float cameraSpeedFactor = 0.05f;               // Geschwindigkeit der Kamerafahrt
+SplinePath cameraPath;                         // Pfad für Kamerafahrt
 
-// Spline UI
+// Benutzerdefinierter Spline zur Anzeige in der Szene
 SplinePath userSplinePath;
-std::unique_ptr<SplineRenderer> userSplineRenderer;
-bool showUserSpline = true;
+std::unique_ptr<SplineRenderer> userSplineRenderer;  // Renderer für Benutzerpfad
+bool showUserSpline = true;                    // Benutzerpfad anzeigen
 
+// Punktlichtstruktur für mehrere Lichtquellen
 struct PointLight {
-    glm::vec3 position;
+    glm::vec3 position;                        // Position des Lichts in Weltkoordinaten
 
-    float constant;
-    float linear;
-    float quadratic;
+    float constant;                            // Konstantanteil der Abschwächung
+    float linear;                              // Linearer Abschwächungsfaktor
+    float quadratic;                           // Quadratischer Abschwächungsfaktor
 
-    glm::vec3 ambient;
-    glm::vec3 diffuse;
-    glm::vec3 specular;
+    glm::vec3 ambient;                         // Umgebungslichtanteil
+    glm::vec3 diffuse;                         // Direktes Licht (Streuung)
+    glm::vec3 specular;                        // Spiegelndes Licht
 };
 
+// Callback zum Anpassen des Viewports bei Größenänderung
 void framebuffer_size_callback(GLFWwindow* w, int width, int height) {
-    glViewport(0, 0, width, height);
+    glViewport(0, 0, width, height);           // Neue Größe an OpenGL übergeben
 }
 
+// Tastaturbewegung: Steuerung der Kamera mit WSAD + Space/Shift
 void processInput(GLFWwindow* window, Camera& camera, float deltaTime) {
     glm::vec3 forward = glm::normalize(camera.getTarget() - camera.getPosition());
     glm::vec3 right = glm::normalize(glm::cross(forward, glm::vec3(0.0f, 1.0f, 0.0f)));
@@ -78,6 +81,7 @@ void processInput(GLFWwindow* window, Camera& camera, float deltaTime) {
     }
 }
 
+// Initialisiert ImGui-Bibliothek für UI-Rendering
 void setupImGui(GLFWwindow* window) {
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
@@ -99,20 +103,20 @@ void renderImGui(Camera& camera, std::vector<PointLight>& pointLights) {
 
         float fov = camera.getFOV();
         if (ImGui::SliderFloat("Field of View", &fov, 10.0f, 120.0f))
-            camera.setFOV(fov);  // 🆕 Änderung
+            camera.setFOV(fov);
 
         float nearClip = camera.getNearPlane();
         if (ImGui::SliderFloat("Near Plane", &nearClip, 0.01f, 10.0f))
-            camera.setNearPlane(nearClip);  // 🆕 Änderung
+            camera.setNearPlane(nearClip);
 
         float farClip = camera.getFarPlane();
         if (ImGui::SliderFloat("Far Plane", &farClip, 100.0f, 10000.0f))
-            camera.setFarPlane(farClip);  // 🆕 Änderung
+            camera.setFarPlane(farClip);
     }
 
     if (ImGui::Button("Starte Kamerafahrt")) {
         animateCamera = true;
-        cameraSplineTime = 0.0f; // Zurücksetzen
+        cameraSplineTime = 0.0f;
     }
     if (ImGui::Button("Stoppe Kamerafahrt")) {
         animateCamera = false;
@@ -132,7 +136,6 @@ void renderImGui(Camera& camera, std::vector<PointLight>& pointLights) {
 
     // Point-Light-Einstellungen
     if (ImGui::CollapsingHeader("Punktlichter", ImGuiTreeNodeFlags_DefaultOpen)) {
-        // Steuerelemente für die Anzahl aktiver Punktlichter
         int numLights = pointLights.size();
         static int activePointLights = std::min(numLights, 4); // MAX_POINT_LIGHTS ist 4
         ImGui::SliderInt("Aktive Punktlichter", &activePointLights, 0, std::min(numLights, 4));
