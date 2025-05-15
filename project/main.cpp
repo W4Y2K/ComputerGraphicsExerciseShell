@@ -564,8 +564,8 @@ int main() {
         );
 
         splineShader.use();
-        splineShader.setVec3("color", glm::vec3(1.0, 0.5, 0.2));  // für Orbit 1
-        splineShader.setVec3("color", glm::vec3(0.2, 0.8, 1.0));  // für Orbit 2       
+        splineShader.setVec3("color", glm::vec3(1.0f, 0.5f, 0.2f));  // für Orbit 1
+        splineShader.setVec3("color", glm::vec3(0.2f, 0.8f, 1.0f));  // für Orbit 2       
 
 
         // Orbit 1
