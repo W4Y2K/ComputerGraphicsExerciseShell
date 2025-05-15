@@ -98,8 +98,17 @@ void renderImGui(Camera& camera, std::vector<PointLight>& pointLights) {
 
     // Kamera-Einstellungen
     if (ImGui::CollapsingHeader("Kamera", ImGuiTreeNodeFlags_DefaultOpen)) {
+
+        if (ImGui::Button("Starte Kamerafahrt")) {
+            animateCamera = true;
+            cameraSplineTime = 0.0f; // Zurücksetzen
+        }
+        if (ImGui::Button("Stoppe Kamerafahrt")) {
+            animateCamera = false;
+        }
+
         ImGui::SliderFloat("Kamera-Geschwindigkeit", &cameraSpeed, 10.0f, 500.0f);
-        if (ImGui::Button("Kamera zurücksetzen")) camera.reset();
+        if (ImGui::Button("Kamera zuruecksetzen")) camera.reset();
 
         float fov = camera.getFOV();
         if (ImGui::SliderFloat("Field of View", &fov, 10.0f, 120.0f))
@@ -114,13 +123,6 @@ void renderImGui(Camera& camera, std::vector<PointLight>& pointLights) {
             camera.setFarPlane(farClip);
     }
 
-    if (ImGui::Button("Starte Kamerafahrt")) {
-        animateCamera = true;
-        cameraSplineTime = 0.0f;
-    }
-    if (ImGui::Button("Stoppe Kamerafahrt")) {
-        animateCamera = false;
-    }
 
 
     // Allgemeine Beleuchtungseinstellungen
@@ -134,58 +136,20 @@ void renderImGui(Camera& camera, std::vector<PointLight>& pointLights) {
         }
     }
 
-    // Point-Light-Einstellungen
-    if (ImGui::CollapsingHeader("Punktlichter", ImGuiTreeNodeFlags_DefaultOpen)) {
-        int numLights = pointLights.size();
-        static int activePointLights = std::min(numLights, 4); // MAX_POINT_LIGHTS ist 4
-        ImGui::SliderInt("Aktive Punktlichter", &activePointLights, 0, std::min(numLights, 4));
-
-        // Steuerelemente für jedes aktive Punktlicht anzeigen
-        for (int i = 0; i < activePointLights && i < pointLights.size(); i++) {
-            if (ImGui::TreeNode(("Punktlicht " + std::to_string(i + 1)).c_str())) {
-                ImGui::SliderFloat3(("Position##" + std::to_string(i)).c_str(),
-                    glm::value_ptr(pointLights[i].position), -200.0f, 200.0f);
-
-                // Lichtfarben-Steuerelemente
-                float ambient[3] = { pointLights[i].ambient.r, pointLights[i].ambient.g, pointLights[i].ambient.b };
-                float diffuse[3] = { pointLights[i].diffuse.r, pointLights[i].diffuse.g, pointLights[i].diffuse.b };
-                float specular[3] = { pointLights[i].specular.r, pointLights[i].specular.g, pointLights[i].specular.b };
-
-                if (ImGui::ColorEdit3(("Ambient##" + std::to_string(i)).c_str(), ambient)) {
-                    pointLights[i].ambient = glm::vec3(ambient[0], ambient[1], ambient[2]);
-                }
-
-                if (ImGui::ColorEdit3(("Diffuse##" + std::to_string(i)).c_str(), diffuse)) {
-                    pointLights[i].diffuse = glm::vec3(diffuse[0], diffuse[1], diffuse[2]);
-                }
-
-                if (ImGui::ColorEdit3(("Specular##" + std::to_string(i)).c_str(), specular)) {
-                    pointLights[i].specular = glm::vec3(specular[0], specular[1], specular[2]);
-                }
-
-                // Dämpfungssteuerelemente
-                ImGui::SliderFloat(("Konstant##" + std::to_string(i)).c_str(), &pointLights[i].constant, 0.1f, 2.0f);
-                ImGui::SliderFloat(("Linear##" + std::to_string(i)).c_str(), &pointLights[i].linear, 0.0001f, 0.1f, "%.4f");
-                ImGui::SliderFloat(("Quadratisch##" + std::to_string(i)).c_str(), &pointLights[i].quadratic, 0.000001f, 0.01f, "%.6f");
-
-                ImGui::TreePop();
-            }
-        }
-
-    }
+   
 
     // Benutzerdefinierte Spline UI
     if (ImGui::CollapsingHeader("Benutzerdefinierter Spline", ImGuiTreeNodeFlags_DefaultOpen)) {
         static glm::vec3 newPoint = glm::vec3(0.0f);
 
-        if (ImGui::Button("Punkt hinzufügen")) {
+        if (ImGui::Button("Punkt hinzufuegen")) {
             userSplinePath.addPoint(newPoint);
             userSplineRenderer->setSpline(userSplinePath);
             userSplineRenderer->upload();
         }
         ImGui::InputFloat3("Neuer Punkt", glm::value_ptr(newPoint));
 
-        if (ImGui::Button("Spline löschen")) {
+        if (ImGui::Button("Spline loeschen")) {
             userSplinePath.clearPoints();
             userSplineRenderer->setSpline(userSplinePath);
             userSplineRenderer->upload();
@@ -331,7 +295,7 @@ int main() {
         "../../../../project/shaders/model.frag"
     );
 
-    // Verbesserte Sonnen-Shader mit besseren Dateipfaden
+        // Verbesserte Sonnen-Shader mit besseren Dateipfaden
     Shader sunShader(
         "../../../../project/shaders/sun.vert",
         "../../../../project/shaders/sun.frag"
@@ -418,17 +382,6 @@ int main() {
     // Sonnen-Texturen laden
     unsigned int sunDiffuse = loadTexture("../../../../project/models/sun/textures/SunDiffuse.png");
 
-    // Fallback für Diffuse-Textur
-    if (sunDiffuse == 0) {
-        sunDiffuse = loadTexture("../../../../project/models/planets/sun_diffuse.png");
-    }
-
-
-    // Check if sun textures were found
-    if (sunDiffuse == 0) {
-        // Fallback texture path
-        sunDiffuse = loadTexture("../../../../project/models/planets/sun_diffuse.png");
-    }
 
     // Alternative Fallback wenn keine Textur gefunden wurde
     if (sunDiffuse == 0) {
