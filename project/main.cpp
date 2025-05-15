@@ -543,23 +543,21 @@ int main() {
             circlePoints2.push_back(glm::vec3(cos(a) * r2, 0.0f, sin(a) * r2));
         }
 
-        // WICHTIG: Punkte so duplizieren, dass die Kurve richtig „herumlaufen“ kann
+        
         SplinePath orbit2;
-        orbit2.addPoint(circlePoints2[count - 2]); // P0 (vor letzter)
-        orbit2.addPoint(circlePoints2[count - 1]); // P1 (letzter)
-        for (const auto& p : circlePoints2)       // P2...Pn
+        orbit2.addPoint(circlePoints2[count - 2]); 
+        orbit2.addPoint(circlePoints2[count - 1]); 
+        for (const auto& p : circlePoints2)     
             orbit2.addPoint(p);
-        orbit2.addPoint(circlePoints2[0]);         // Pn+1
-        orbit2.addPoint(circlePoints2[1]);         // Pn+2
+        orbit2.addPoint(circlePoints2[0]);   
+        orbit2.addPoint(circlePoints2[1]); 
 
 
         SplineRenderer renderer2;
         renderer2.setSpline(orbit2);
         renderer2.upload();
 
-
-
-        // Add the following line to define and initialize the splineShader object  
+                 
         Shader splineShader(  
            "../../../../project/shaders/spline.vert",  
            "../../../../project/shaders/spline.frag"  
@@ -596,9 +594,6 @@ int main() {
             glm::vec3 lookAt = glm::vec3(0, 0, 0);
             cameraNode->getCamera().setFromExternalPosition(camPos, lookAt);
         }
-
-
-
 
         // 8) ImGui zeichnen (mit Camera aus dem Graph)
         renderImGui(cameraNode->getCamera(), pointLights);

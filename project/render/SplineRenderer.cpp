@@ -1,5 +1,7 @@
 #include "SplineRenderer.h"
 
+//Rendert Spline-Kurven in OpenGL
+
 SplineRenderer::SplineRenderer() {
     glGenVertexArrays(1, &VAO);
     glGenBuffers(1, &VBO);
@@ -11,7 +13,7 @@ SplineRenderer::~SplineRenderer() {
 }
 
 void SplineRenderer::setSpline(SplinePath& path) {
-    points = path.getInterpolatedPoints();  // z.B. 100–200 Punkte
+    points = path.getInterpolatedPoints();
 }
 
 void SplineRenderer::upload() {

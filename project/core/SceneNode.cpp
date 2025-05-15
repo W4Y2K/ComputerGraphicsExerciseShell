@@ -32,15 +32,12 @@ void SceneNode::update(float deltaTime) {
 }
 
 void SceneNode::draw(const glm::mat4& parentTransform, unsigned int shaderID) {
-    // Rotation um die eigene Achse im lokalen Ursprung
     glm::mat4 rotation = glm::rotate(glm::mat4(1.0f),
         glm::radians(currentRotation),
         glm::vec3(0.0f, 1.0f, 0.0f));
 
-    // Zuerst rotieren, dann positionieren -> Rotation im lokalen Ursprung
     glm::mat4 localTransform = transform * rotation;
 
-    // Eltern-Transformation übernehmen
     glm::mat4 globalTransform = parentTransform * localTransform;
 
     if (model) {
@@ -66,7 +63,6 @@ void SelfRotatingNode::draw(const glm::mat4& parentTransform, unsigned int shade
         glm::radians(currentRotation),
         glm::vec3(0.0f, 1.0f, 0.0f));
 
-    // Rotation zuerst, dann transform → lokale Rotation
     glm::mat4 localTransform = rotation * transform;
 
     glm::mat4 globalTransform = parentTransform * localTransform;

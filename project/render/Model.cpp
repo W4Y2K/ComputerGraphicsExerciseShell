@@ -4,6 +4,9 @@
 #include <tiny_gltf.h>
 #include <iostream>
 
+// Die Model-Klasse lädt ein glTF- oder glb-Modell, verarbeitet seine Meshes und Texturen
+// und bietet eine draw()-Funktion zum Rendern mit einem OpenGL-Shaderprogramm.
+
 Model::Model(const std::string& path) {
     loadModel(path);
 }
@@ -37,14 +40,11 @@ void Model::loadModel(const std::string& path) {
     tinygltf::Model gltfModel;
     tinygltf::TinyGLTF loader;
     std::string err, warn;
-
-    // Dummy-Loader für Bilder, damit eingebettete Texturen ignoriert werden können
-
-    // Add a custom LoadImageData callback to handle image loading  
+ 
     loader.SetImageLoader([](tinygltf::Image* image, const int imageIndex, std::string* err,  
                             std::string* warn, int req_width, int req_height,  
                             const unsigned char* bytes, int size, void* user_data) -> bool {  
-       // Use stb_image to load the image data  
+
        int width, height, channels;  
        unsigned char* data = stbi_load_from_memory(bytes, size, &width, &height, &channels, 4);  
        if (!data) {  
@@ -76,7 +76,6 @@ void Model::loadModel(const std::string& path) {
             std::vector<Vertex> vertices;
             std::vector<unsigned int> indices;
 
-            // POSITION
             const auto& posAccessor = gltfModel.accessors[primitive.attributes.at("POSITION")];
             const auto& posView = gltfModel.bufferViews[posAccessor.bufferView];
             const auto& posBuffer = gltfModel.buffers[posView.buffer];
@@ -93,7 +92,6 @@ void Model::loadModel(const std::string& path) {
                 vertices[i].Position = {p[0], p[1], p[2]};
             }
 
-            // NORMAL (optional)
             if (primitive.attributes.count("NORMAL")) {
                 const auto& normAccessor = gltfModel.accessors[primitive.attributes.at("NORMAL")];
                 const auto& normView = gltfModel.bufferViews[normAccessor.bufferView];
@@ -112,8 +110,7 @@ void Model::loadModel(const std::string& path) {
             } else { 
                 for (auto& v : vertices) v.Normal = {0,1,0};
             }
-
-            // TEXCOORD_0 (optional)
+)
             if (primitive.attributes.count("TEXCOORD_0")) {
                 const auto& uvAccessor = gltfModel.accessors[primitive.attributes.at("TEXCOORD_0")];
                 const auto& uvView = gltfModel.bufferViews[uvAccessor.bufferView];
@@ -131,7 +128,6 @@ void Model::loadModel(const std::string& path) {
                 }
             }
 
-            // Indices
             const auto& idxAccessor = gltfModel.accessors[primitive.indices];
             const auto& idxView = gltfModel.bufferViews[idxAccessor.bufferView];
             const auto& idxBuffer = gltfModel.buffers[idxView.buffer];
@@ -153,7 +149,7 @@ void Model::loadModel(const std::string& path) {
                     break;
             }
 
-            std::vector<Texture> textures; // aktuell leer
+            std::vector<Texture> textures;
 
             if (primitive.material >= 0) {
                 const auto& mat = gltfModel.materials[primitive.material];
@@ -187,7 +183,6 @@ void Model::loadModel(const std::string& path) {
     }
 }
 
-// Definition des Mesh-Konstruktors direkt hier
 Model::Mesh::Mesh(const std::vector<Vertex>& vertices,
     const std::vector<unsigned int>& indices,
     const std::vector<Texture>& textures)
@@ -205,13 +200,13 @@ Model::Mesh::Mesh(const std::vector<Vertex>& vertices,
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(unsigned int), indices.data(), GL_STATIC_DRAW);
 
-    glEnableVertexAttribArray(0); // Position
+    glEnableVertexAttribArray(0);
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)0);
 
-    glEnableVertexAttribArray(1); // Normal
+    glEnableVertexAttribArray(1);
     glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, Normal));
 
-    glEnableVertexAttribArray(2); // TexCoords
+    glEnableVertexAttribArray(2);
     glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, TexCoords));
 
     glBindVertexArray(0);

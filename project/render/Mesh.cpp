@@ -1,5 +1,10 @@
 #include "Mesh.h"
 
+// Die Mesh-Klasse kapselt ein einzelnes 3D-Mesh mit Vertexdaten, Texturen und OpenGL-Objekten.
+// Sie übernimmt die Initialisierung der GPU-Ressourcen (VAO/VBO/EBO), definiert die Vertex-Attribute
+// und rendert das Mesh über den übergebenen Shader.
+
+
 Mesh::Mesh(std::vector<Vertex> &verts,
            std::vector<unsigned int> &inds,
            std::vector<Texture> &texs)
@@ -20,7 +25,6 @@ void Mesh::setupMesh() {
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(unsigned int),
                  indices.data(), GL_STATIC_DRAW);
 
-    // Vertex-Attribute
     glEnableVertexAttribArray(0);
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE,
                           sizeof(Vertex), (void*)0);
@@ -37,13 +41,11 @@ void Mesh::setupMesh() {
 }
 
 void Mesh::Draw(Shader &shader) {
-    // Texturen binden
     for (unsigned int i = 0; i < textures.size(); ++i) {
         glActiveTexture(GL_TEXTURE0 + i);
         shader.setInt(textures[i].type, i);
         glBindTexture(GL_TEXTURE_2D, textures[i].id);
     }
-    // Draw
     glBindVertexArray(VAO);
     glDrawElements(GL_TRIANGLES, indices.size(), GL_UNSIGNED_INT, 0);
     glBindVertexArray(0);
