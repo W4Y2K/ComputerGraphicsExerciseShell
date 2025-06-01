@@ -308,7 +308,6 @@ int main() {
 
     auto pinkSpaceShip = std::make_shared<Model>("../../../../project/models/spaceships/spaceship_pink.glb");
     auto greySpaceShip = std::make_shared<Model>("../../../../project/models/spaceships/spaceship_gray.glb");
-    auto ufo = std::make_shared<Model>("../../../../project/models/spaceships/ufo.glb");
 
     auto sunNode = std::make_shared<SelfRotatingNode>();
     sunNode->setModel(sunPlanet);
